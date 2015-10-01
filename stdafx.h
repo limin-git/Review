@@ -38,3 +38,4 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/functional.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/local_function.hpp>

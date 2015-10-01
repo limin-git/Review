@@ -8,11 +8,14 @@ public:
     SingleLineReview( const std::string& file_name );
     bool initialize();
     void review();
-    void save_review_to_history( size_t minimal_gap_seconds = 60 * 7 );
+    void save_review_to_history();
+    std::vector< std::pair<std::string, size_t> > collect_strings_to_review();
 
 public:
 
     void save_review_time( const std::pair<std::string, size_t>& s );
+    bool load_strings();
+    bool load_history();
 
 public:
 
@@ -23,4 +26,5 @@ public:
     std::ofstream m_review_strm;
     boost::log::sources::logger m_log;
     std::vector< std::pair<std::string, size_t> > m_strings;
+    std::map< size_t, std::vector<std::time_t> > m_history;
 };

@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include "SingleLineReview.h"
-#include "Library/Utility.h"
-#include <boost/local_function.hpp>
 
 
 SingleLineReview::SingleLineReview( const std::string& file_name )
@@ -15,6 +13,14 @@ SingleLineReview::SingleLineReview( const std::string& file_name )
 
 bool SingleLineReview::initialize()
 {
+    return
+        load_strings() &&
+        load_history();
+}
+
+
+bool SingleLineReview::load_strings()
+{
     std::ifstream is( m_file_name.c_str() );
 
     if ( !is )
@@ -27,6 +33,8 @@ bool SingleLineReview::initialize()
 
     for ( std::string s; std::getline( is, s ); )
     {
+        boost::trim(s);
+
         if ( ! s.empty() )
         {
             m_strings.push_back( std::make_pair( s, string_hash(s) ) );
@@ -34,6 +42,72 @@ bool SingleLineReview::initialize()
     }
 
     return true;
+}
+
+
+bool SingleLineReview::load_history()
+{
+    if ( ! boost::filesystem::exists( m_history_name ) )
+    {
+        return true;
+    }
+
+    std::ifstream is( m_history_name.c_str() );
+
+    if ( ! is )
+    {
+        BOOST_LOG(m_log) << __FUNCTION__ << " - can not open file " << m_history_name;
+        return false;
+    }
+
+    for ( std::string s; std::getline( is, s ); )
+    {
+        if ( ! s.empty() )
+        {
+            size_t hash = 0;
+            std::time_t time = 0;
+            std::stringstream strm( s );
+            strm >> hash;
+
+            while ( strm >> time )
+            {
+                m_history[hash].push_back(time);
+            }
+        }
+    }
+
+    return true;
+}
+
+
+std::vector< std::pair<std::string, size_t> > SingleLineReview::collect_strings_to_review()
+{
+    std::vector< std::pair<std::string, size_t> > strings;
+    const size_t gaps[] = { 0, 60, 7*60, 30*60, 60*60, 3*60*60, 24*60*60, 3*24*60*60, 7*24*60*60, 15*24*60*60, 30*24*60*60, 3*30*24*60*60 };
+    
+    for ( size_t i = 0; i < m_strings.size(); ++i )
+    {
+        size_t hash = m_strings[i].second;
+        std::vector<std::time_t>& times = m_history[hash];
+
+        if ( times.empty() )
+        {
+            strings.push_back( m_strings[i] );
+        }
+        else
+        {
+            size_t review_rounds = times.size();
+            std::time_t last_review_time = m_history[hash].back();
+            std::time_t now = std::time(0);
+
+            if ( last_review_time + gaps[review_rounds] < now )
+            {
+                strings.push_back( m_strings[i] );
+            }
+        }
+    }
+
+    return strings;
 }
 
 
@@ -50,36 +124,43 @@ void SingleLineReview::save_review_time( const std::pair<std::string, size_t>& s
 
 void SingleLineReview::review()
 {
-    m_review_strm.open( m_review_name.c_str(), std::ios::app );
-
-    if ( ! m_review_strm )
-    {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open for append: " << m_review_name;
-        return;
-    }
+    std::string line;
 
     for ( size_t round = 1; true ; ++round )
     {
-        std::cout << "****** there are " << m_strings.size() << " items to review ******" << std::endl;
-        system( "PAUSE > NUL" );
+        m_review_strm.open( m_review_name.c_str(), std::ios::app );
+
+        if ( ! m_review_strm )
+        {
+            BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open for append: " << m_review_name;
+            return;
+        }
+
+        std::vector< std::pair<std::string, size_t> > strings = collect_strings_to_review();
+
+        std::cout << "****** there are " << strings.size() << " items to review ******" << std::endl;
+        std::getline( std::cin, line );
         system( "CLS" );
 
-        std::random_shuffle( m_strings.begin(), m_strings.end() );
+        std::random_shuffle( strings.begin(), strings.end() );
 
-        for ( size_t i = 0; i < m_strings.size(); ++i )
+        for ( size_t i = 0; i < strings.size(); ++i )
         {
-            std::cout << "\t" << m_strings[i].first << " [" << round << ":" << i + 1 << "/" << m_strings.size() << "] " << std::flush;
-            save_review_time( m_strings[i] );
-            system( "PAUSE > NUL" );
+            std::cout << "\t" << strings[i].first << " [" << round << ":" << i + 1 << "/" << strings.size() << "] " << std::flush;
+            save_review_time( strings[i] );
+            std::getline( std::cin, line );
             std::cout << std::endl;
         }
+
+        m_review_strm.close();
+        save_review_to_history();
     }
 }
 
 
-void SingleLineReview::save_review_to_history( size_t minimal_gap_seconds )
+void SingleLineReview::save_review_to_history()
 {
-    std::map< size_t, std::vector<std::time_t> > hash_2_time_map;
+    std::map< size_t, std::vector<std::time_t> >& hash_2_time_map = m_history;
 
     bool BOOST_LOCAL_FUNCTION( bind this_, bind& hash_2_time_map )
     {
@@ -116,8 +197,10 @@ void SingleLineReview::save_review_to_history( size_t minimal_gap_seconds )
     }
     BOOST_LOCAL_FUNCTION_NAME( load_history );
 
-    bool BOOST_LOCAL_FUNCTION( bind this_, bind& hash_2_time_map, const bind minimal_gap_seconds )
+    bool BOOST_LOCAL_FUNCTION( bind this_, bind& hash_2_time_map )
     {
+        const size_t gaps[] = { 0, 60, 7*60, 30*60, 60*60, 3*60*60, 24*60*60, 3*24*60*60, 7*24*60*60, 15*24*60*60, 30*24*60*60, 3*30*24*60*60 };
+
         if ( ! boost::filesystem::exists( this_->m_review_name ) )
         {
             return false;
@@ -130,8 +213,6 @@ void SingleLineReview::save_review_to_history( size_t minimal_gap_seconds )
             BOOST_LOG(this_->m_log) << __FUNCTION__ << " - can not open file " << this_->m_review_name;
             return false;
         }
-
-        bool is_changed = false;
 
         for ( std::string s; std::getline( is, s ); )
         {
@@ -149,15 +230,14 @@ void SingleLineReview::save_review_to_history( size_t minimal_gap_seconds )
                     last_time = hash_2_time_map[hash].back();
                 }
 
-                if ( minimal_gap_seconds < time - last_time )
+                if ( last_time + gaps[ hash_2_time_map[hash].size() ] < time )
                 {
                     hash_2_time_map[hash].push_back( time );
-                    is_changed = true;
                 }
             }
         }
 
-        return is_changed;
+        return true;
     }
     BOOST_LOCAL_FUNCTION_NAME( load_review_and_merge_to_history );
 
