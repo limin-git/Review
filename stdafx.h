@@ -40,3 +40,7 @@
 #include <boost/functional.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/local_function.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/lock_guard.hpp>
+#include <boost/thread/condition_variable.hpp>

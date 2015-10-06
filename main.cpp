@@ -6,15 +6,28 @@
 int _tmain(int argc, _TCHAR* argv[])
 {
     boost::program_options::variables_map vm;
-    boost::program_options::options_description desc( "Options" );
+    boost::program_options::options_description desc( "Options", 100 );
     desc.add_options()
         ( "help,?", "produce help message" )
         ( "file-name,F", boost::program_options::value<std::string>(),  "the file to be reviewed" )
+        ( "config-file,C", boost::program_options::value<std::string>()->default_value( "review.cfg" ),  "config file" )
+        ( "display-mode,M", boost::program_options::value<std::string>()->default_value( "all" ),  "all / question-only / answer-only" )
         ;
 
     desc.add( Log::get_description() );
-    boost::program_options::store( boost::program_options::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), vm );
-    boost::program_options::notify(vm);
+    store( boost::program_options::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), vm );
+    notify( vm );
+
+    if ( vm.count( "config-file" ) )
+    {
+        std::string config_file = vm["config-file"].as<std::string>();
+
+        if ( boost::filesystem::exists( config_file ) )
+        {
+            store( boost::program_options::parse_config_file<char>( config_file.c_str(), desc, true ), vm );
+            notify( vm );
+        }
+    }
 
     if ( vm.count( "help" ) )
     {
@@ -37,7 +50,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
     try
     {
-        SingleLineReview( file_name ).review();
+        SingleLineReview( file_name, vm ).review();
     }
     catch ( ... )
     {

@@ -2,15 +2,25 @@
 #include "SingleLineReview.h"
 
 
-SingleLineReview::SingleLineReview( const std::string& file_name )
+SingleLineReview::SingleLineReview( const std::string& file_name, const boost::program_options::variables_map& vm )
     : m_file_name( file_name ),
-      m_last_modified_time( 0 )
+      m_last_modified_time( 0 ),
+      m_variable_map( vm ),
+      m_is_reviewing( false )
 {
     m_review_name   = boost::filesystem::change_extension( m_file_name, ".review" ).string();
     m_history_name  = boost::filesystem::change_extension( m_file_name, ".history" ).string();
-
-    const size_t span[] = { 0, 60, 3*60, 7*60, 15*60, 30*60, 60*60, 3*60*60, 7*60*60, 24*60*60, 3*24*60*60, 7*24*60*60, 15*24*60*60, 30*24*60*60, 3*30*24*60*60 };
+    enum { minute = 60, hour = 60 * minute ,day = 24 * minute, month = 30 * day };
+    const size_t span[] =
+    {
+        0*minute,   1*minute,   3*minute,   7*minute,   15*minute,  30*minute,  30*minute,
+        1*hour,     3*hour,     7*hour,     7*hour,     7*hour,     7*hour,     7*hour,
+        1*day,      2*day,      3*day,      4*day,      5*day,      6*day,      7*day,
+        7*day,      7*day,      7*day,      7*day,      7*day,      7*day,      7*day,
+        1*month,    1*month,    1*month,    1*month,    1*month,    1*month,    1*month
+    };
     m_review_span.assign( span, span + sizeof(span) / sizeof(size_t) );
+    new boost::thread( boost::bind( &SingleLineReview::collect_strings_to_review_thread, this ) );
 }
 
 
@@ -22,30 +32,43 @@ void SingleLineReview::review()
     {
         reload_strings();
         synchronize_history();
-        std::vector< std::pair<std::string, size_t> > strings = collect_strings_to_review();
+        collect_strings_to_review();
+        wait_for_input( "\t****** there are " + boost::lexical_cast<std::string>(m_reviewing_strings.size() ) + " items to review ******\n" );
 
-        system( "CLS" );
-        std::cout << "\t****** there are " << strings.size() << " items to review ******" << std::endl;
-        wait_for_input();
-
-        if ( ! strings.empty() )
+        if ( ! m_reviewing_strings.empty() )
         {
-            m_review_strm.open( m_review_name.c_str(), std::ios::app );
+            on_review_begin();
 
-            std::random_shuffle( strings.begin(), strings.end() );
-
-            for ( size_t i = 0; i < strings.size(); ++i )
+            for ( size_t i = 0; i < m_reviewing_strings.size(); ++i )
             {
-                display_string_to_review( strings, i );
+                display_reviewing_string( m_reviewing_strings, i );
                 wait_for_input();
-                save_review_time( strings[i] );
+                save_review_time( m_reviewing_strings[i] );
             }
 
-            m_review_strm.close();
+            on_review_end();
         }
 
         save_review_to_history();
     }
+}
+
+
+void SingleLineReview::on_review_begin()
+{
+    m_is_reviewing = true;
+    m_review_strm.open( m_review_name.c_str(), std::ios::app );
+    std::random_shuffle( m_reviewing_strings.begin(), m_reviewing_strings.end() );
+    system( ( "TITLE " + m_file_name + " - " + boost::lexical_cast<std::string>( m_reviewing_strings.size() ) ).c_str() );
+}
+
+
+void SingleLineReview::on_review_end()
+{
+    m_is_reviewing = false;
+    m_review_strm.close();
+    m_reviewing_strings.clear();
+    system( ( "TITLE " + m_file_name ).c_str() );
 }
 
 
@@ -148,9 +171,11 @@ bool SingleLineReview::check_last_write_time()
 }
 
 
-std::vector< std::pair<std::string, size_t> > SingleLineReview::collect_strings_to_review()
+void SingleLineReview::collect_strings_to_review()
 {
-    std::vector< std::pair<std::string, size_t> > strings;
+    boost::unique_lock<boost::mutex> guard( m_mutex );
+
+    m_reviewing_strings.clear();
     
     for ( size_t i = 0; i < m_strings.size(); ++i )
     {
@@ -159,7 +184,7 @@ std::vector< std::pair<std::string, size_t> > SingleLineReview::collect_strings_
 
         if ( times.empty() )
         {
-            strings.push_back( m_strings[i] );
+            m_reviewing_strings.push_back( m_strings[i] );
         }
         else
         {
@@ -175,12 +200,31 @@ std::vector< std::pair<std::string, size_t> > SingleLineReview::collect_strings_
 
             if ( last_review_time + m_review_span[review_rounds] < now )
             {
-                strings.push_back( m_strings[i] );
+                m_reviewing_strings.push_back( m_strings[i] );
             }
         }
     }
+}
 
-    return strings;
+
+void SingleLineReview::collect_strings_to_review_thread()
+{
+    void BOOST_LOCAL_FUNCTION( const bind& m_file_name, const bind& m_reviewing_strings )
+    {
+        system( ( "TITLE " + m_file_name + " - " + boost::lexical_cast<std::string>( m_reviewing_strings.size() ) ).c_str() ); 
+    }
+    BOOST_LOCAL_FUNCTION_NAME( set_title );
+
+    while ( true )
+    {
+        boost::this_thread::sleep_for( boost::chrono::seconds(30) );
+
+        if ( false == m_is_reviewing )
+        {
+            collect_strings_to_review();
+            set_title();
+        }
+    }
 }
 
 
@@ -201,10 +245,14 @@ void SingleLineReview::save_review_time( const std::pair<std::string, size_t>& s
 }
 
 
-void SingleLineReview::wait_for_input()
+void SingleLineReview::wait_for_input( const std::string& message )
 {
-    std::string line;
-    std::getline( std::cin, line );
+    if ( ! message.empty() )
+    {
+        std::cout << message << std::flush;
+    }
+
+    std::getline( std::cin, std::string() );
     system( "CLS" );
 }
 
@@ -319,7 +367,31 @@ void SingleLineReview::synchronize_history()
 }
 
 
-void SingleLineReview::display_string_to_review( const std::vector< std::pair<std::string, size_t> >& strings, size_t index )
+void SingleLineReview::display_reviewing_string( const std::vector< std::pair<std::string, size_t> >& strings, size_t index )
 {
-    std::cout << "\t" << strings[index].first << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
+    const std::string& s = strings[index].first;
+
+    if ( boost::starts_with( s, "[Q]" ) )
+    {
+        size_t pos = s.find( "[A] " );
+
+        if ( pos != std::string::npos )
+        {
+            std::string question = s.substr( 4, pos - 4 );
+            std::string answer = s.substr( pos + 4 );
+            boost::trim(question);
+            boost::trim(answer);
+            std::cout << "\t" << question << std::flush;
+            std::getline( std::cin, std::string() );
+            std::cout << "\t" << answer << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
+        }
+        else
+        {
+            BOOST_LOG(m_log) << __FUNCTION__ << " - bad format: " << s;
+        }
+    }
+    else
+    {
+        std::cout << "\t" << strings[index].first << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
+    }
 }
