@@ -5,6 +5,8 @@
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+    system( "COLOR F0" );
+
     boost::program_options::variables_map vm;
     boost::program_options::options_description desc( "Options", 100 );
     desc.add_options()

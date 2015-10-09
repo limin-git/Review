@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Log.h"
+BOOST_LOG_ATTRIBUTE_KEYWORD(debug_level_attribute, "Level", std::string)
 
 
 boost::program_options::options_description Log::get_description()
@@ -9,6 +10,7 @@ boost::program_options::options_description Log::get_description()
         ( "log-ini", boost::program_options::value<std::string>(), "log configuration file" )
         ( "log-file-name", boost::program_options::value<std::string>(), "log file name." )
         ( "log-rotation-size", boost::program_options::value<size_t>(), "log rotation size." )
+        ( "log-debug-levels", boost::program_options::value< std::vector<std::string> >()->multitoken(), "error, info, debug, trace, *" )
         ;
 
     return desc;
@@ -65,10 +67,14 @@ void Log::initialize( const boost::program_options::variables_map& vm )
                 //<< "[" << expressions::attr<process_id>("ProcessID") << "] "
                 //<< "[" << expressions::attr<thread_id>( "ThreadID" ) << "] "
                 << expressions::format_named_scope( "Scope", keywords::format = "%c" )
-                << expressions::if_( expressions::has_attr<std::string>( "Channel" ) )
-                   [
-                       expressions::stream << "[" << expressions::attr<std::string>( "Channel" ) << "] "
-                   ]
+                    << expressions::if_( expressions::has_attr<std::string>( "Channel" ) )
+                    [
+                        expressions::stream << "[" << expressions::attr<std::string>( "Channel" ) << "] "
+                    ]
+                << expressions::if_( expressions::has_attr<std::string>( "Level" ) )
+                    [
+                        expressions::stream << "[" << expressions::attr<std::string>( "Level" ) << "] "
+                    ]
                 << expressions::if_( expressions::has_attr<std::string>( "Tag" ) )
                    [
                        expressions::stream << "[" << expressions::attr<std::string>( "Tag" ) << "] "
@@ -80,7 +86,29 @@ void Log::initialize( const boost::program_options::variables_map& vm )
                 << " "
                 << expressions::message;
 
+            std::vector<std::string> debug_levels;
+
+            if ( vm.count( "log-debug-levels" ) )
+            {
+                debug_levels = vm["log-debug-levels"].as< std::vector<std::string> >();
+            }
+
+            bool with_error = std::find( debug_levels.begin(), debug_levels.end(), "error" )    != debug_levels.end();
+            bool with_info  = std::find( debug_levels.begin(), debug_levels.end(), "info" )     != debug_levels.end();
+            bool with_debug = std::find( debug_levels.begin(), debug_levels.end(), "debug" )    != debug_levels.end();
+            bool with_trace = std::find( debug_levels.begin(), debug_levels.end(), "trace" )    != debug_levels.end();
+            bool with_all   = std::find( debug_levels.begin(), debug_levels.end(), "*" )        != debug_levels.end();
+
+            filter fltr = 
+                ( ! expressions::has_attr(debug_level_attribute) ) || 
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "ERROR" && ( with_error || with_all ) ) ||
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "INFO"  && ( with_info || with_all ) ) ||
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "DEBUG" && ( with_debug || with_all ) ) ||
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "TRACE" && ( with_trace || with_all ) )
+                ;
+
             console_sink->set_formatter( frmttr );
+            console_sink->set_filter( fltr );
 
             if ( false == log_file_name.empty() )
             {
@@ -93,6 +121,7 @@ void Log::initialize( const boost::program_options::variables_map& vm )
                     );
 
                 file_sink->set_formatter( frmttr );
+                file_sink->set_filter( fltr  );
             }
         }
 
