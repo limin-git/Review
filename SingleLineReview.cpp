@@ -75,7 +75,7 @@ void SingleLineReview::on_review_end()
 void SingleLineReview::initialize_history()
 {
     m_history.clear();
-    
+    bool should_write_history = false;
     history_type history = load_history_from_file( m_history_name );
 
     merge_history( history );
@@ -83,6 +83,7 @@ void SingleLineReview::initialize_history()
     if ( m_history != history )
     {
         BOOST_LOG(m_log) << __FUNCTION__ << " - wrong history detected.";
+        should_write_history = true;
     }
 
     history_type review_history = load_history_from_file( m_review_name );
@@ -92,34 +93,28 @@ void SingleLineReview::initialize_history()
         BOOST_LOG(m_log) << __FUNCTION__ << " - review detected.";
         merge_history( review_history );
         boost::filesystem::remove( m_review_name );
+        should_write_history = true;
     }
 
-    write_history();
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is uptodate.\n" << get_history_string( m_history );
+    if ( should_write_history )
+    {
+        write_history();
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is uptodate.\n" << get_history_string( m_history );
+    }
 }
 
 
 bool SingleLineReview::reload_strings()
 {
-    bool BOOST_LOCAL_FUNCTION( const bind& m_file_name )
-    {
-        static std::time_t m_last_modified_time;
-        std::time_t t = boost::filesystem::last_write_time( m_file_name );
+    static std::time_t m_last_write_time = 0;
+    std::time_t t = boost::filesystem::last_write_time( m_file_name );
 
-        if ( m_last_modified_time < t )
-        {
-            m_last_modified_time = t;
-            return true;
-        }
-
-        return false;
-    }
-    BOOST_LOCAL_FUNCTION_NAME( is_file_modified );
-
-    if ( ! is_file_modified() )
+    if ( t == m_last_write_time )
     {
         return true;
     }
+
+    m_last_write_time = t;
 
     std::ifstream is( m_file_name.c_str() );
 
@@ -137,7 +132,7 @@ bool SingleLineReview::reload_strings()
 
         if ( ! s.empty() )
         {
-            if ( s[0] == '#' )
+            if ( '#' == s[0] )
             {
                 continue;
             }
@@ -153,70 +148,52 @@ bool SingleLineReview::reload_strings()
 void SingleLineReview::collect_strings_to_review()
 {
     boost::unique_lock<boost::mutex> guard( m_mutex );
-
     m_reviewing_strings.clear();
     
     for ( size_t i = 0; i < m_strings.size(); ++i )
     {
         size_t hash = m_strings[i].second;
-        std::vector<std::time_t>& times = m_history[hash];
+        time_list& times = m_history[hash];
+        size_t review_round = times.size();
+        std::time_t current_time = std::time(0);
+        std::time_t last_review_time = times.back();
+        std::time_t span = m_review_span[review_round];
 
         if ( times.empty() )
         {
             m_reviewing_strings.push_back( m_strings[i] );
+            continue;
         }
-        else
+
+        if ( m_review_span.size() == review_round )
         {
-            size_t review_rounds = times.size();
-
-            if ( m_review_span.size() < review_rounds )
-            {
-                continue;
-            }
-
-            std::time_t first_review_time = m_history[hash].front();
-            std::time_t last_review_time = m_history[hash].back();
-            std::time_t now = std::time(0);
-
-            if ( last_review_time + m_review_span[review_rounds] < now )
-            {
-                m_reviewing_strings.push_back( m_strings[i] );
-            }
-
-            if ( now < last_review_time )
-            {
-                BOOST_LOG(m_log_trace) << __FUNCTION__ 
-                    << " - time calcuation error: last-time=" << time_string(last_review_time)
-                    << " now=" << time_string(last_review_time)
-                    ;
-            }
-            else
-            {
-                BOOST_LOG(m_log_trace) << __FUNCTION__ << " -"
-                    << " first-time=" << time_string(first_review_time)
-                    << " last-time=" << time_string(last_review_time)
-                    << " now-time=" << time_string(now)
-                    << " review-round=" << review_rounds
-                    << " span=" << time_duration_string( m_review_span[review_rounds] )
-                    << " elapsed=" << time_duration_string( now - last_review_time )
-                    ;
-            }
+            BOOST_LOG(m_log) << __FUNCTION__ << " - finished(" << hash << "): " << m_strings[i].first;
+            continue;
         }
+
+        if ( last_review_time + span < current_time )
+        {
+            m_reviewing_strings.push_back( m_strings[i] );
+        }
+
+        if ( current_time < last_review_time )
+        {
+            BOOST_LOG(m_log) << __FUNCTION__ << " - wrong time: last-review-time=" << time_string( last_review_time );
+        }
+
+        BOOST_LOG(m_log_trace) << __FUNCTION__ << " -"
+            << " first-review-time = " << time_string( times.front() )
+            << " last-review-time = " << time_string(last_review_time)
+            << " review-round = " << review_round
+            << " span = " << time_duration_string( span )
+            << " elapsed = " << time_duration_string( current_time - last_review_time )
+            ;
     }
 }
 
 
 void SingleLineReview::collect_strings_to_review_thread()
 {
-    void BOOST_LOCAL_FUNCTION( const bind& m_file_name, const bind& m_reviewing_strings )
-    {
-        if ( ! m_reviewing_strings.empty() )
-        {
-            system( ( "TITLE " + m_file_name + " - " + boost::lexical_cast<std::string>( m_reviewing_strings.size() ) ).c_str() ); 
-        }
-    }
-    BOOST_LOCAL_FUNCTION_NAME( set_title );
-
     while ( true )
     {
         boost::this_thread::sleep_for( boost::chrono::seconds(30) );
@@ -224,7 +201,11 @@ void SingleLineReview::collect_strings_to_review_thread()
         if ( false == m_is_reviewing )
         {
             collect_strings_to_review();
-            set_title();
+
+            if ( ! m_reviewing_strings.empty() )
+            {
+                system( ( "TITLE " + m_file_name + " - " + boost::lexical_cast<std::string>( m_reviewing_strings.size() ) ).c_str() ); 
+            }
         }
     }
 }
@@ -261,24 +242,16 @@ void SingleLineReview::wait_for_input( const std::string& message )
 
 void SingleLineReview::write_review_to_history()
 {
-    try
-    {
-        history_type review_history = load_history_from_file( m_review_name );
+    history_type review_history = load_history_from_file( m_review_name );
 
-        if ( ! review_history.empty() )
+    if ( ! review_history.empty() )
+    {
+        merge_history( review_history );
+
+        if ( write_history() )
         {
-            merge_history( review_history );
-
-            if ( write_history() )
-            {
-                boost::filesystem::remove( m_review_name );
-            }
+            boost::filesystem::remove( m_review_name );
         }
-    }
-    catch ( boost::filesystem::filesystem_error& e )
-    {
-    	BOOST_LOG(m_log) << __FUNCTION__ << " - " << e.what();
-        throw;
     }
 }
 
@@ -312,31 +285,32 @@ void SingleLineReview::display_reviewing_string( const std::vector< std::pair<st
 
     if ( boost::starts_with( s, "[Q]" ) )
     {
-        size_t pos = s.find( "[A] " );
+        size_t pos = s.find( "[A]" );
 
-        if ( pos != std::string::npos )
-        {
-            std::string question = s.substr( 4, pos - 4 );
-            std::string answer = s.substr( pos + 4 );
-            boost::trim(question);
-            boost::trim(answer);
-
-            if ( !question.empty() && ! answer.empty() )
-            {
-                std::cout << "\t" << question << std::flush;
-                std::getline( std::cin, std::string() );
-                std::cout << "\t" << answer << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
-            }
-        }
-        else
+        if ( pos == std::string::npos )
         {
             BOOST_LOG(m_log) << __FUNCTION__ << " - bad format: " << s;
+            return;
+        }
+
+        std::string question = s.substr( 4, pos - 4 );
+        std::string answer = s.substr( pos + 4 );
+        boost::trim(question);
+        boost::trim(answer);
+
+        if ( !question.empty() && ! answer.empty() )
+        {
+            std::cout << "\t" << question << std::flush;
+            std::getline( std::cin, std::string() );
+            std::cout << "\t" << answer;
         }
     }
     else
     {
-        std::cout << "\t" << strings[index].first << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
+        std::cout << "\t" << strings[index].first;
     }
+
+    std::cout << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
 }
 
 
@@ -381,13 +355,15 @@ std::string SingleLineReview::time_duration_string( std::time_t t )
     }
 
     std::stringstream strm;
+    #define WRAP_ZERO(x) (9 < x ? "" : "0") << x 
 
     if ( mon || d )
     {
-        strm << (9 < mon ? "" : "0" ) << mon << "/" << (9 < d ? "" : "0" ) << d << "-";
+        strm << WRAP_ZERO(mon) << "/" << WRAP_ZERO(d) << "-";
     }
 
-    strm << (9 < h ? "" : "0" ) << h << ":" << (9 < min ? "" : "0" ) << min;
+    strm << WRAP_ZERO(h) << ":" << WRAP_ZERO(min);
+    #undef WRAP_ZERO
 
     BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << ori << " = " << strm.str();
     return strm.str();    
@@ -421,7 +397,6 @@ history_type SingleLineReview::load_history_from_file( const std::string& file_n
 
     if ( ! boost::filesystem::exists( file_name ) )
     {
-        // BOOST_LOG(m_log) << __FUNCTION__ << " - file not exist " << file_name;
         return history;
     }
 
