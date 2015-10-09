@@ -7,6 +7,7 @@ SingleLineReview::SingleLineReview( const std::string& file_name, const boost::p
       m_variable_map( vm ),
       m_is_reviewing( false )
 {
+    std::srand ( unsigned ( std::time(0) ) );
     m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
     m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
     m_review_name   = boost::filesystem::change_extension( m_file_name, ".review" ).string();
@@ -19,7 +20,7 @@ SingleLineReview::SingleLineReview( const std::string& file_name, const boost::p
         7*day,      7*day,      7*day,      7*day,      7*day,      7*day,      7*day,
         1*month,    1*month,    1*month,    1*month,    1*month,    1*month,    1*month
     };
-    m_review_span.assign( span, span + sizeof(span) / sizeof(std::time_t) );
+    m_review_spans.assign( span, span + sizeof(span) / sizeof(std::time_t) );
     new boost::thread( boost::bind( &SingleLineReview::collect_strings_to_review_thread, this ) );
 }
 
@@ -58,7 +59,7 @@ void SingleLineReview::on_review_begin()
 {
     m_is_reviewing = true;
     m_review_strm.open( m_review_name.c_str(), std::ios::app );
-    std::random_shuffle( m_reviewing_strings.begin(), m_reviewing_strings.end() );
+    std::random_shuffle( m_reviewing_strings.begin(), m_reviewing_strings.end(), random_gen );
     system( ( "TITLE " + m_file_name + " - " + boost::lexical_cast<std::string>( m_reviewing_strings.size() ) ).c_str() );
 }
 
@@ -99,8 +100,9 @@ void SingleLineReview::initialize_history()
     if ( should_write_history )
     {
         write_history();
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is uptodate.\n" << get_history_string( m_history );
     }
+
+    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is uptodate.\n" << get_history_string( m_history );
 }
 
 
@@ -157,7 +159,7 @@ void SingleLineReview::collect_strings_to_review()
         size_t review_round = times.size();
         std::time_t current_time = std::time(0);
         std::time_t last_review_time = times.back();
-        std::time_t span = m_review_span[review_round];
+        std::time_t span = m_review_spans[review_round];
 
         if ( times.empty() )
         {
@@ -165,7 +167,7 @@ void SingleLineReview::collect_strings_to_review()
             continue;
         }
 
-        if ( m_review_span.size() == review_round )
+        if ( m_review_spans.size() == review_round )
         {
             BOOST_LOG(m_log) << __FUNCTION__ << " - finished(" << hash << "): " << m_strings[i].first;
             continue;
@@ -412,6 +414,7 @@ history_type SingleLineReview::load_history_from_file( const std::string& file_n
 
     size_t hash = 0;
     std::time_t time = 0;
+    std::stringstream strm;
 
     for ( std::string s; std::getline( is, s ); )
     {
@@ -419,7 +422,8 @@ history_type SingleLineReview::load_history_from_file( const std::string& file_n
 
         if ( ! s.empty() )
         {
-            std::stringstream strm(s);
+            strm.clear();
+            strm.str(s);
             strm >> hash;
             std::vector<std::time_t>& times = history[hash];
 
@@ -447,7 +451,7 @@ void SingleLineReview::merge_history( const history_type& history )
 
         for ( size_t i = 0; i < times.size(); ++i )
         {
-            if ( last_time + m_review_span[round] < times[i] )
+            if ( last_time + m_review_spans[round] < times[i] )
             {
                 history_times.push_back( times[i] );
                 last_time = times[i];

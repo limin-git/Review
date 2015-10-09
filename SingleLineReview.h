@@ -32,6 +32,7 @@ public:
     void merge_history( const history_type& review_history );
     std::ostream& output_history( std::ostream& os, const history_type& history );
     std::string get_history_string( const history_type& history );
+    static int random_gen( int i ) { return std::rand() % i; }
 
 public:
 
@@ -51,7 +52,7 @@ public:
     std::string m_history_name;
     std::ofstream m_review_strm;
     volatile bool m_is_reviewing;
-    std::vector<std::time_t> m_review_span;
+    std::vector<std::time_t> m_review_spans;
     boost::log::sources::logger m_log;
     boost::log::sources::logger m_log_debug;
     boost::log::sources::logger m_log_trace;
