@@ -52,7 +52,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
     try
     {
-        SingleLineReview( file_name, vm ).review();
+        SingleLineReview r( file_name, vm );
+        r.review();
+        // r.update_hash_algorighom( &SingleLineReview::string_hash, &SingleLineReview::string_hash_2 );
     }
     catch ( ... )
     {

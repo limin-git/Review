@@ -10,6 +10,7 @@ SingleLineReview::SingleLineReview( const std::string& file_name, const boost::p
     std::srand ( unsigned ( std::time(0) ) );
     m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
     m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
+    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
     m_review_name   = boost::filesystem::change_extension( m_file_name, ".review" ).string();
     m_history_name  = boost::filesystem::change_extension( m_file_name, ".history" ).string();
     const std::time_t span[] =
@@ -43,7 +44,27 @@ void SingleLineReview::review()
             for ( size_t i = 0; i < m_reviewing_strings.size(); ++i )
             {
                 display_reviewing_string( m_reviewing_strings, i );
-                wait_for_input();
+
+                std::string s = wait_for_input();
+
+                if ( s == "repeat" || s == "r" )
+                {
+                    i--;
+                    continue;
+                }
+
+                if ( s == "back" || s == "b" )
+                {
+                    if ( 0 < i ) i -= 2;
+                    else if ( 0 == i ) i--;
+                    continue;
+                }
+                
+                if ( s == "skip" || s == "s" )
+                {
+                    continue;
+                }
+
                 write_review_time( m_reviewing_strings[i] );
             }
 
@@ -106,7 +127,7 @@ void SingleLineReview::initialize_history()
 }
 
 
-bool SingleLineReview::reload_strings()
+bool SingleLineReview::reload_strings( hash_type hasher )
 {
     static std::time_t m_last_write_time = 0;
     std::time_t t = boost::filesystem::last_write_time( m_file_name );
@@ -139,7 +160,7 @@ bool SingleLineReview::reload_strings()
                 continue;
             }
 
-            m_strings.push_back( std::make_pair( s, m_string_hash(s) ) );
+            m_strings.push_back( std::make_pair( s, hasher(s) ) );
         }
     }
 
@@ -156,10 +177,6 @@ void SingleLineReview::collect_strings_to_review()
     {
         size_t hash = m_strings[i].second;
         time_list& times = m_history[hash];
-        size_t review_round = times.size();
-        std::time_t current_time = std::time(0);
-        std::time_t last_review_time = times.back();
-        std::time_t span = m_review_spans[review_round];
 
         if ( times.empty() )
         {
@@ -167,11 +184,17 @@ void SingleLineReview::collect_strings_to_review()
             continue;
         }
 
+        size_t review_round = times.size();
+
         if ( m_review_spans.size() == review_round )
         {
             BOOST_LOG(m_log) << __FUNCTION__ << " - finished(" << hash << "): " << m_strings[i].first;
             continue;
         }
+
+        std::time_t current_time = std::time(0);
+        std::time_t last_review_time = times.back();
+        std::time_t span = m_review_spans[review_round];
 
         if ( last_review_time + span < current_time )
         {
@@ -230,15 +253,18 @@ void SingleLineReview::write_review_time( const std::pair<std::string, size_t>& 
 }
 
 
-void SingleLineReview::wait_for_input( const std::string& message )
+std::string SingleLineReview::wait_for_input( const std::string& message )
 {
     if ( ! message.empty() )
     {
         std::cout << message << std::flush;
     }
 
-    std::getline( std::cin, std::string() );
+    std::string input;
+    std::getline( std::cin, input );
     system( "CLS" );
+    boost::trim(input);
+    return input;
 }
 
 
@@ -495,4 +521,84 @@ std::string SingleLineReview::get_history_string( const history_type& history )
     std::stringstream strm;
     output_history( strm, history );
     return strm.str();
+}
+
+
+std::ostream& SingleLineReview::output_time_list( std::ostream& os, const time_list& times )
+{
+    if ( times.empty() )
+    {
+        return os;
+    }
+
+    os << " " << time_string( times[0] );
+
+    for ( size_t i = 1; i < times.size(); ++i )
+    {
+        os << " " << time_duration_string( times[i] - times[i - 1] );
+    }
+
+    return os;
+}
+
+std::string SingleLineReview::get_time_list_string( const time_list& times )
+{
+    std::stringstream strm;
+    output_time_list( strm, times );
+    return strm.str();
+}
+
+
+size_t SingleLineReview::string_hash( const std::string& str )
+{
+    std::string s = str;
+    const char* chinese_chars[] =
+    {
+        "¡¡", "£¬", "¡£", "¡¢", "£¿", "£¡", "£»", "£º", "¡¤", "£®", "¡°", "¡±", "¡®", "¡¯", "¡«", "@", "£¤", "£ü",
+        "¡¶", "¡·", "£¨", "£¨", "¡¾", "¡¿", "¡¸", "¡¹", "¡º", "¡»", "¡¼", "¡½", "¡´", "¡µ", "£û", "£ý",
+        "¡ª", "¡ª¡ª",  "¡­", "¡­¡­"
+    };
+
+    for ( size_t i = 0; i < sizeof(chinese_chars) / sizeof(char*); ++i )
+    {
+        boost::erase_all( s, chinese_chars[i] );
+    }
+
+    s.erase( std::remove_if( s.begin(), s.end(), boost::is_any_of( " \t\"\',.?:;!-/#()|<>{}[]~`@$%^&*+" ) ), s.end() );
+    boost::to_lower(s);
+    static boost::hash<std::string> string_hasher;
+    return string_hasher(s);
+}
+
+
+void SingleLineReview::update_hash_algorighom( hash_type old_hasher, hash_type new_hasher )
+{
+    // 1) create new_hash function
+    // 2) use new hash here
+    // 3) execute this
+    // 4) replace ols hash to new hash
+
+    initialize_history();
+    reload_strings( old_hasher );
+
+    history_type history;
+
+    for ( size_t i = 0; i < m_strings.size(); ++i )
+    {
+        std::string s = m_strings[i].first;
+        size_t hash = m_strings[i].second;
+        time_list& times = m_history[hash];
+
+        size_t new_hash = new_hasher(s);
+
+        m_strings[i].second = new_hash;
+        history[new_hash] = times;
+    }
+
+    if ( history.size() == m_history.size() )
+    {
+        m_history = history;
+        write_history();
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history updated";
+    }
 }
