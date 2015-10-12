@@ -434,7 +434,7 @@ bool SingleLineReview::write_history()
         os << std::endl;
     }
 
-    BOOST_LOG(m_log) << __FUNCTION__ << " - " << "update history, size = " << m_history.size();
+    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "update history, size = " << m_history.size();
     return true;
 }
 
