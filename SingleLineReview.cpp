@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SingleLineReview.h"
+#include <boost/timer/timer.hpp>
 
 
 SingleLineReview::SingleLineReview( const std::string& file_name, const boost::program_options::variables_map& vm )
@@ -34,41 +35,57 @@ void SingleLineReview::review()
     {
         reload_strings();
         synchronize_history();
-        collect_strings_to_review();
-        wait_for_input( "\t********** " + boost::lexical_cast<std::string>(m_reviewing_strings.size() ) + " **********\n" );
+        collect_reviewing_strings();
+        wait_for_input( "\t***** " + boost::lexical_cast<std::string>(m_reviewing_strings.size() ) + " *****\n" );
 
         if ( ! m_reviewing_strings.empty() )
         {
-            on_review_begin();
+            std::string c;
+            boost::timer::cpu_timer t;
 
-            for ( size_t i = 0; i < m_reviewing_strings.size(); ++i )
             {
-                display_reviewing_string( m_reviewing_strings, i );
+                on_review_begin();
 
-                std::string s = wait_for_input();
-
-                if ( s == "repeat" || s == "r" )
+                for ( size_t i = 0; i < m_reviewing_strings.size(); ++i )
                 {
-                    i--;
-                    continue;
+                    t.start();
+
+                    c = display_reviewing_string( m_reviewing_strings, i );
+
+                    if ( c.empty() )
+                    {
+                        c = wait_for_input();
+                    }
+
+                    if ( t.elapsed().wall < 500 * 1000 * 1000 )
+                    {
+                        i--;
+                        continue;
+                    }
+
+                    if ( c == "repeat" || c == "r" )
+                    {
+                        i--;
+                        continue;
+                    }
+
+                    if ( c == "back" || c == "b" )
+                    {
+                        if ( 0 < i ) i -= 2;
+                        else if ( 0 == i ) i--;
+                        continue;
+                    }
+                    
+                    if ( c == "skip" || c == "s" )
+                    {
+                        continue;
+                    }
+
+                    write_review_time( m_reviewing_strings[i] );
                 }
 
-                if ( s == "back" || s == "b" )
-                {
-                    if ( 0 < i ) i -= 2;
-                    else if ( 0 == i ) i--;
-                    continue;
-                }
-                
-                if ( s == "skip" || s == "s" )
-                {
-                    continue;
-                }
-
-                write_review_time( m_reviewing_strings[i] );
+                on_review_end();
             }
-
-            on_review_end();
         }
 
         write_review_to_history();
@@ -127,14 +144,14 @@ void SingleLineReview::initialize_history()
 }
 
 
-bool SingleLineReview::reload_strings( hash_type hasher )
+void SingleLineReview::reload_strings( hash_functor hasher )
 {
     static std::time_t m_last_write_time = 0;
     std::time_t t = boost::filesystem::last_write_time( m_file_name );
 
     if ( t == m_last_write_time )
     {
-        return true;
+        return;
     }
 
     m_last_write_time = t;
@@ -144,10 +161,10 @@ bool SingleLineReview::reload_strings( hash_type hasher )
     if ( !is )
     {
         BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open file: " << m_file_name;
-        return false;
+        return;
     }
 
-    m_strings.clear();
+    string_hash_list strings;
 
     for ( std::string s; std::getline( is, s ); )
     {
@@ -160,15 +177,19 @@ bool SingleLineReview::reload_strings( hash_type hasher )
                 continue;
             }
 
-            m_strings.push_back( std::make_pair( s, hasher(s) ) );
+            strings.push_back( std::make_pair( s, hasher(s) ) );
         }
     }
 
-    return true;
+    if ( m_strings != strings )
+    {
+        m_strings.swap( strings );
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "size = " << m_strings.size();
+    }
 }
 
 
-void SingleLineReview::collect_strings_to_review()
+void SingleLineReview::collect_reviewing_strings()
 {
     boost::unique_lock<boost::mutex> guard( m_mutex );
     m_reviewing_strings.clear();
@@ -225,7 +246,7 @@ void SingleLineReview::collect_strings_to_review_thread()
 
         if ( false == m_is_reviewing )
         {
-            collect_strings_to_review();
+            collect_reviewing_strings();
 
             if ( ! m_reviewing_strings.empty() )
             {
@@ -236,7 +257,7 @@ void SingleLineReview::collect_strings_to_review_thread()
 }
 
 
-void SingleLineReview::write_review_time( const std::pair<std::string, size_t>& s )
+void SingleLineReview::write_review_time( const string_hash_pair& s )
 {
     if ( ! m_review_strm )
     {
@@ -286,6 +307,7 @@ void SingleLineReview::write_review_to_history()
 
 void SingleLineReview::synchronize_history()
 {
+    bool history_changed = false;
     std::set<size_t> hashes;
 
     for ( size_t i = 0; i < m_strings.size(); ++i )
@@ -297,28 +319,44 @@ void SingleLineReview::synchronize_history()
     {
         if ( hashes.find( it->first ) == hashes.end() )
         {
+            BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "erase: " << it->first << " " << get_time_list_string( it->second );
             m_history.erase( it++ );
+            history_changed = true;
         }
         else
         {
             ++it;
         }
     }
+
+    if ( history_changed )
+    {
+        write_history();
+    }
 }
 
 
-void SingleLineReview::display_reviewing_string( const std::vector< std::pair<std::string, size_t> >& strings, size_t index )
+std::string SingleLineReview::display_reviewing_string( const string_hash_list& strings, size_t index )
 {
+    std::stringstream strm;
+    strm << "TITLE " << m_file_name << " " << index + 1 << " / " << strings.size();
+    system( strm.str().c_str() );
+
     const std::string& s = strings[index].first;
 
-    if ( boost::starts_with( s, "[Q]" ) )
+    if ( boost::starts_with( s, "[Q]" ) || boost::starts_with( s, "[q]" ) )
     {
         size_t pos = s.find( "[A]" );
 
         if ( pos == std::string::npos )
         {
-            BOOST_LOG(m_log) << __FUNCTION__ << " - bad format: " << s;
-            return;
+            pos = s.find( "[a]" );
+
+            if ( pos == std::string::npos )
+            {
+                BOOST_LOG(m_log) << __FUNCTION__ << " - bad format: " << s;
+                return "";
+            }
         }
 
         std::string question = s.substr( 4, pos - 4 );
@@ -329,16 +367,23 @@ void SingleLineReview::display_reviewing_string( const std::vector< std::pair<st
         if ( !question.empty() && ! answer.empty() )
         {
             std::cout << "\t" << question << std::flush;
-            std::getline( std::cin, std::string() );
-            std::cout << "\t" << answer;
+
+            std::string command;
+            std::getline( std::cin, command );
+            if ( ! command.empty() )
+            {
+                return command;
+            }
+
+            std::cout << "\t" << answer << std::flush;
         }
     }
     else
     {
-        std::cout << "\t" << strings[index].first;
+        std::cout << "\t" << strings[index].first << std::flush;
     }
 
-    std::cout << " [" << index + 1 << "/" << strings.size() << "] " << std::flush;
+    return "";
 }
 
 
@@ -353,48 +398,22 @@ std::string SingleLineReview::time_string( std::time_t t, const char* format )
 
 std::string SingleLineReview::time_duration_string( std::time_t t )
 {
-    std::time_t ori = t;
-    std::time_t mon = 0;
-    std::time_t d = 0;
-    std::time_t h = 0;
-    std::time_t min = 0;
-
-    if ( month <= t )
-    {
-        mon = t / month;
-        t %= month;
-    }
-
-    if ( day <= t )
-    {
-        d = t / day;
-        t %= day;
-    }
-
-    if ( hour <= t )
-    {
-        h = t / hour;
-        t %= hour;
-    }
-
-    if ( minute <= t )
-    {
-        min =  t / minute;
-    }
-
     std::stringstream strm;
+    std::time_t mon = 0, d = 0, h = 0, min = 0;
+
+    #define CALCULATE( n, u, x ) if ( u <= x  ) { n = x / u; x %= u; }
+    CALCULATE( mon, month, t );
+    CALCULATE( d, day, t );
+    CALCULATE( h, hour, t );
+    CALCULATE( min, minute, t );
+    #undef CALCULATE
+
     #define WRAP_ZERO(x) (9 < x ? "" : "0") << x 
-
-    if ( mon || d )
-    {
-        strm << WRAP_ZERO(mon) << "/" << WRAP_ZERO(d) << "-";
-    }
-
+    if ( mon || d ) { strm << WRAP_ZERO(mon) << "/" << WRAP_ZERO(d) << "-"; }
     strm << WRAP_ZERO(h) << ":" << WRAP_ZERO(min);
     #undef WRAP_ZERO
 
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << ori << " = " << strm.str();
-    return strm.str();    
+    return strm.str();
 }
 
 
@@ -415,6 +434,7 @@ bool SingleLineReview::write_history()
         os << std::endl;
     }
 
+    BOOST_LOG(m_log) << __FUNCTION__ << " - " << "update history, size = " << m_history.size();
     return true;
 }
 
@@ -432,11 +452,8 @@ history_type SingleLineReview::load_history_from_file( const std::string& file_n
 
     if ( ! is )
     {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - can not open file " << file_name;
         return history;
     }
-
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << file_name << " begin";
 
     size_t hash = 0;
     std::time_t time = 0;
@@ -444,8 +461,6 @@ history_type SingleLineReview::load_history_from_file( const std::string& file_n
 
     for ( std::string s; std::getline( is, s ); )
     {
-        BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << s;
-
         if ( ! s.empty() )
         {
             strm.clear();
@@ -460,7 +475,6 @@ history_type SingleLineReview::load_history_from_file( const std::string& file_n
         }
     }
 
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << file_name << " end";
     return history;
 }
 
@@ -571,13 +585,8 @@ size_t SingleLineReview::string_hash( const std::string& str )
 }
 
 
-void SingleLineReview::update_hash_algorighom( hash_type old_hasher, hash_type new_hasher )
+void SingleLineReview::update_hash_algorighom( hash_functor old_hasher, hash_functor new_hasher )
 {
-    // 1) create new_hash function
-    // 2) use new hash here
-    // 3) execute this
-    // 4) replace ols hash to new hash
-
     initialize_history();
     reload_strings( old_hasher );
 
