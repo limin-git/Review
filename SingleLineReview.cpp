@@ -23,7 +23,7 @@ SingleLineReview::SingleLineReview( const std::string& file_name, const boost::p
         1*month,    1*month,    1*month,    1*month,    1*month,    1*month,    1*month
     };
     m_review_spans.assign( span, span + sizeof(span) / sizeof(std::time_t) );
-    new boost::thread( boost::bind( &SingleLineReview::collect_strings_to_review_thread, this ) );
+    new boost::thread( boost::bind( &SingleLineReview::collect_reviewing_strings_thread, this ) );
 }
 
 
@@ -121,7 +121,7 @@ void SingleLineReview::initialize_history()
     
     if ( m_history != history )
     {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - wrong history detected.";
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - wrong history detected.";
         should_write_history = true;
     }
 
@@ -129,7 +129,7 @@ void SingleLineReview::initialize_history()
 
     if ( ! review_history.empty() )
     {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - review detected.";
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - review detected.";
         merge_history( review_history );
         boost::filesystem::remove( m_review_name );
         should_write_history = true;
@@ -238,7 +238,7 @@ void SingleLineReview::collect_reviewing_strings()
 }
 
 
-void SingleLineReview::collect_strings_to_review_thread()
+void SingleLineReview::collect_reviewing_strings_thread()
 {
     while ( true )
     {
@@ -568,9 +568,9 @@ size_t SingleLineReview::string_hash( const std::string& str )
     std::string s = str;
     const char* chinese_chars[] =
     {
-        "¡¡", "£¬", "¡£", "¡¢", "£¿", "£¡", "£»", "£º", "¡¤", "£®", "¡°", "¡±", "¡®", "¡¯", "¡«", "@", "£¤", "£ü",
+        "¡¡", "£¬", "¡£", "¡¢", "£¿", "£¡", "£»", "£º", "¡¤", "£®", "¡°", "¡±", "¡®", "¡¯",
+        "£à", "£­", "£½", "¡«", "£À", "££", "£¤", "£¥", "£ª", "£ß", "£«", "£ü", "¡ª", "¡ª¡ª",  "¡­", "¡­¡­",
         "¡¶", "¡·", "£¨", "£¨", "¡¾", "¡¿", "¡¸", "¡¹", "¡º", "¡»", "¡¼", "¡½", "¡´", "¡µ", "£û", "£ý",
-        "¡ª", "¡ª¡ª",  "¡­", "¡­¡­"
     };
 
     for ( size_t i = 0; i < sizeof(chinese_chars) / sizeof(char*); ++i )

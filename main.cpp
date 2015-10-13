@@ -50,10 +50,17 @@ int _tmain(int argc, _TCHAR* argv[])
     std::string file_name = vm["file-name"].as<std::string>();
     system( ("TITLE " + file_name).c_str() );
 
+    if ( ::CreateMutex( NULL, FALSE, file_name.c_str() ) == NULL || GetLastError() == ERROR_ALREADY_EXISTS )
+    {
+        std::cout << "another instance is running." << std::endl;
+        return 0;
+    }
+
     try
     {
         SingleLineReview r( file_name, vm );
         r.review();
+        
         // r.update_hash_algorighom( &SingleLineReview::string_hash, &SingleLineReview::string_hash_2 );
     }
     catch ( ... )

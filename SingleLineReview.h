@@ -25,7 +25,7 @@ public:
     void reload_strings( hash_functor hasher = &this_type::string_hash );
     void synchronize_history();
     void collect_reviewing_strings();
-    void collect_strings_to_review_thread();
+    void collect_reviewing_strings_thread();
     std::string display_reviewing_string( const string_hash_list& strings, size_t index );
     std::string wait_for_input( const std::string& message = "" );
     void write_review_time( const string_hash_pair& s );
