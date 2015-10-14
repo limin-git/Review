@@ -97,14 +97,16 @@ void Log::initialize( const boost::program_options::variables_map& vm )
             bool with_info  = std::find( debug_levels.begin(), debug_levels.end(), "info" )     != debug_levels.end();
             bool with_debug = std::find( debug_levels.begin(), debug_levels.end(), "debug" )    != debug_levels.end();
             bool with_trace = std::find( debug_levels.begin(), debug_levels.end(), "trace" )    != debug_levels.end();
+            bool with_test  = std::find( debug_levels.begin(), debug_levels.end(), "test" )     != debug_levels.end();
             bool with_all   = std::find( debug_levels.begin(), debug_levels.end(), "*" )        != debug_levels.end();
 
             filter fltr = 
                 ( ! expressions::has_attr(debug_level_attribute) ) || 
                 ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "ERROR" && ( with_error || with_all ) ) ||
-                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "INFO"  && ( with_info || with_all ) ) ||
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "INFO"  && ( with_info  || with_all ) ) ||
                 ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "DEBUG" && ( with_debug || with_all ) ) ||
-                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "TRACE" && ( with_trace || with_all ) )
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "TRACE" && ( with_trace || with_all ) ) ||
+                ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "TEST" &&  ( with_test  || with_all ) )
                 ;
 
             console_sink->set_formatter( frmttr );

@@ -187,6 +187,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SingleLineReview.h"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -225,10 +229,6 @@
 		</File>
 		<File
 			RelativePath=".\SingleLineReview.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\SingleLineReview.h"
 			>
 		</File>
 		<File

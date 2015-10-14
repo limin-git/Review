@@ -14,6 +14,9 @@ int _tmain(int argc, _TCHAR* argv[])
         ( "file-name,F", boost::program_options::value<std::string>(),  "the file to be reviewed" )
         ( "config-file,C", boost::program_options::value<std::string>()->default_value( "review.cfg" ),  "config file" )
         ( "display-mode,M", boost::program_options::value<std::string>()->default_value( "all" ),  "all / question-only / answer-only" )
+        ( "review-time-span-list", boost::program_options::value< std::vector<std::string> >()->multitoken(),  "review time span list" )
+        ( "minimal-review-time", boost::program_options::value<size_t>()->default_value( 500 ),  "in miniseconds" )
+        ( "collect-interval", boost::program_options::value<size_t>()->default_value( 60 ),  "collect reviewing strings time interval (in seconds)" )
         ;
 
     desc.add( Log::get_description() );

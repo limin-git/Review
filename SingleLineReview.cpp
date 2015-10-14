@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "SingleLineReview.h"
-#include <boost/timer/timer.hpp>
 
 
 SingleLineReview::SingleLineReview( const std::string& file_name, const boost::program_options::variables_map& vm )
@@ -8,21 +7,55 @@ SingleLineReview::SingleLineReview( const std::string& file_name, const boost::p
       m_variable_map( vm ),
       m_is_reviewing( false )
 {
-    std::srand ( unsigned ( std::time(0) ) );
+    m_collect_interval = vm["collect-interval"].as<size_t>();
+    m_minimal_review_time = vm["minimal-review-time"].as<size_t>();
+
+    m_review_name   = boost::filesystem::change_extension( m_file_name, ".review" ).string();
+    m_history_name  = boost::filesystem::change_extension( m_file_name, ".history" ).string();
+
     m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
     m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
     m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
-    m_review_name   = boost::filesystem::change_extension( m_file_name, ".review" ).string();
-    m_history_name  = boost::filesystem::change_extension( m_file_name, ".history" ).string();
-    const std::time_t span[] =
+
     {
-        0*minute,   1*minute,   3*minute,   7*minute,   15*minute,  30*minute,  30*minute,
-        1*hour,     3*hour,     7*hour,     7*hour,     7*hour,     7*hour,     7*hour,
-        1*day,      2*day,      3*day,      4*day,      5*day,      6*day,      7*day,
-        7*day,      7*day,      7*day,      7*day,      7*day,      7*day,      7*day,
-        1*month,    1*month,    1*month,    1*month,    1*month,    1*month,    1*month
-    };
-    m_review_spans.assign( span, span + sizeof(span) / sizeof(std::time_t) );
+        std::stringstream strm;
+        boost::chrono::seconds s;
+        std::vector<std::string> string_list;
+
+        if ( vm.count( "review-time-span-list" ) )
+        {
+            string_list = vm["review-time-span-list"].as< std::vector<std::string> >();
+        }
+        else
+        {
+            const char* s[] =
+            {
+                "0 seconds",
+                "7 minutes",    "30 minutes",   "30 minutes",   "30 minutes",   "1 hours",      "1 hours",      "1 hours",
+                "1 hours",      "2 hours",      "3 hours",      "4 hours",      "5 hours",      "6 hours",      "7 hours",
+                "8 hours",      "9 hours",      "10 hours",     "11 hours",     "12 hours",     "13 hours",     "14 hours",
+                "24 hours",     "48 hours",     "72 hours",     "96 hours",     "120 hours",    "144 hours",    "168 hours",
+                "192 hours",    "216 hours",    "240 hours",    "264 hours",    "288 hours",    "312 hours",    "336 hours"
+            };
+
+            string_list.assign( s, s + sizeof(s) / sizeof(char*) );
+        }
+
+        for ( size_t i = 0; i < string_list.size(); ++i )
+        {
+            strm.clear();
+            strm.str( string_list[i] );
+            strm >> s;
+            m_review_spans.push_back( s.count() );
+        }
+
+        strm.clear();
+        strm.str("");
+        std::copy( string_list.begin(), string_list.end(), std::ostream_iterator<std::string>( strm, ", " ) );
+        BOOST_LOG(m_log_trace) << __FUNCTION__ << " - review-time-span(" << string_list.size() << "): " << strm.str();
+    }
+
+    std::srand ( unsigned ( std::time(0) ) );
     new boost::thread( boost::bind( &SingleLineReview::collect_reviewing_strings_thread, this ) );
 }
 
@@ -57,7 +90,7 @@ void SingleLineReview::review()
                         c = wait_for_input();
                     }
 
-                    if ( t.elapsed().wall < 500 * 1000 * 1000 )
+                    if ( t.elapsed().wall < m_minimal_review_time * 1000 * 1000 )
                     {
                         i--;
                         continue;
@@ -92,12 +125,37 @@ void SingleLineReview::review()
     }
 }
 
+bool foo_bar( const string_hash_pair& lhs, const string_hash_pair& rhs )
+{
+    return true;
+}
+ 
 
 void SingleLineReview::on_review_begin()
 {
+    struct ReviewOrder
+    {
+        this_type& m_this;
+        ReviewOrder( this_type& this_ ) : m_this( this_ ) {}
+        bool operator()( const string_hash_pair& lhs, const string_hash_pair& rhs ) const
+        {
+            const time_list& ltimes = m_this.m_history[lhs.second];
+            const time_list& rtimes = m_this.m_history[rhs.second];
+            std::time_t lt = 0; if ( ! ltimes.empty() ) lt = ltimes.back();
+            std::time_t rt = 0; if ( ! rtimes.empty() ) rt = rtimes.back();
+            return 
+                ( lt < rt ) ||
+                ( lt == rt && lhs.first.size() < rhs.first.size() ) ||
+                ( lt == rt && lhs.first.size() == rhs.first.size() && lhs.first < rhs.first )
+                ;
+        }
+    };
+
     m_is_reviewing = true;
     m_review_strm.open( m_review_name.c_str(), std::ios::app );
-    std::random_shuffle( m_reviewing_strings.begin(), m_reviewing_strings.end(), random_gen );
+    ReviewOrder order( *this );
+    // std::random_shuffle( m_reviewing_strings.begin(), m_reviewing_strings.end(), random_gen );
+    std::sort( m_reviewing_strings.begin(), m_reviewing_strings.end(), order );
     system( ( "TITLE " + m_file_name + " - " + boost::lexical_cast<std::string>( m_reviewing_strings.size() ) ).c_str() );
 }
 
@@ -209,7 +267,7 @@ void SingleLineReview::collect_reviewing_strings()
 
         if ( m_review_spans.size() == review_round )
         {
-            BOOST_LOG(m_log) << __FUNCTION__ << " - finished(" << hash << "): " << m_strings[i].first;
+            BOOST_LOG(m_log_debug) << __FUNCTION__ << " - finished (" << hash << "): " << m_strings[i].first;
             continue;
         }
 
@@ -242,7 +300,7 @@ void SingleLineReview::collect_reviewing_strings_thread()
 {
     while ( true )
     {
-        boost::this_thread::sleep_for( boost::chrono::seconds(30) );
+        boost::this_thread::sleep_for( boost::chrono::seconds( m_collect_interval ) );
 
         if ( false == m_is_reviewing )
         {
@@ -610,4 +668,10 @@ void SingleLineReview::update_hash_algorighom( hash_functor old_hasher, hash_fun
         write_history();
         BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history updated";
     }
+}
+
+
+bool SingleLineReview::view_order( const string_hash_pair& lhs, const string_hash_pair& rhs ) const
+{
+    return true;
 }

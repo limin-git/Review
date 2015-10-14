@@ -35,6 +35,7 @@ public:
     bool write_history();
     void merge_history( const history_type& review_history );
     void update_hash_algorighom( hash_functor old_hasher, hash_functor new_hasher );
+    bool view_order( const string_hash_pair& lhs, const string_hash_pair& rhs ) const;
 
 public:
 
@@ -56,6 +57,8 @@ public:
     std::string m_review_name;
     std::string m_history_name;
     std::ofstream m_review_strm;
+    size_t m_minimal_review_time;
+    size_t m_collect_interval;
     volatile bool m_is_reviewing;
     time_list m_review_spans;
     string_hash_list m_strings;
