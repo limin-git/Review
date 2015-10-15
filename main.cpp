@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "SingleLineReview.h"
 #include "Log.h"
+#include "ReviewManager.h"
 
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -17,6 +17,8 @@ int _tmain(int argc, _TCHAR* argv[])
         ( "review-time-span-list", boost::program_options::value< std::vector<std::string> >()->multitoken(),  "review time span list" )
         ( "minimal-review-time", boost::program_options::value<size_t>()->default_value( 500 ),  "in miniseconds" )
         ( "collect-interval", boost::program_options::value<size_t>()->default_value( 60 ),  "collect reviewing strings time interval (in seconds)" )
+        ( "max-cache-size", boost::program_options::value<size_t>()->default_value( 100 ),  "normally write to .review, write to .history every max-cache-size times" )
+        ( "auto-update-interval", boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
         ;
 
     desc.add( Log::get_description() );
@@ -61,10 +63,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
     try
     {
-        SingleLineReview r( file_name, vm );
-        r.review();
-        
-        // r.update_hash_algorighom( &SingleLineReview::string_hash, &SingleLineReview::string_hash_2 );
+        ReviewManager rm( vm );
+        rm.review();
     }
     catch ( ... )
     {

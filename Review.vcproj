@@ -183,11 +183,23 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\History.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Loader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Log.h"
 				>
 			</File>
 			<File
-				RelativePath=".\SingleLineReview.h"
+				RelativePath=".\ReviewManager.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ReviewString.h"
 				>
 			</File>
 			<File
@@ -218,7 +230,19 @@
 				RelativePath=".\targetver.h"
 				>
 			</File>
+			<File
+				RelativePath=".\Utility.h"
+				>
+			</File>
 		</Filter>
+		<File
+			RelativePath=".\History.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Loader.cpp"
+			>
+		</File>
 		<File
 			RelativePath=".\Log.cpp"
 			>
@@ -228,11 +252,23 @@
 			>
 		</File>
 		<File
-			RelativePath=".\SingleLineReview.cpp"
+			RelativePath=".\ReviewManager.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\ReviewString.cpp"
 			>
 		</File>
 		<File
 			RelativePath=".\test.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\test2.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\Utility.cpp"
 			>
 		</File>
 	</Files>
