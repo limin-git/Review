@@ -2,6 +2,7 @@
 #include "ReviewString.h"
 #include "Loader.h"
 #include "History.h"
+#include "Utility.h"
 
 
 ReviewString::ReviewString( size_t hash, Loader* loader, History* history )
@@ -9,11 +10,7 @@ ReviewString::ReviewString( size_t hash, Loader* loader, History* history )
       m_loader( loader ),
       m_history( history )
 {
-}
-
-
-ReviewString::~ReviewString()
-{
+    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
 }
 
 
@@ -66,5 +63,6 @@ std::string ReviewString::review()
         std::cout << "\t" << s << std::flush;
     }
 
+    BOOST_LOG(m_log_test) << __FUNCTION__ << " - " << Utility::get_time_list_string( m_history->get_times(m_hash) );
     return "";
 }

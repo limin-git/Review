@@ -116,6 +116,12 @@ std::time_t History::get_last_review_time( size_t hash )
 }
 
 
+size_t History::get_review_round( size_t hash )
+{
+    return m_history[hash].size();
+}
+
+
 void History::save_history( size_t hash )
 {
     std::time_t current_time = std::time(0);

@@ -12,13 +12,14 @@ int _tmain(int argc, _TCHAR* argv[])
     desc.add_options()
         ( "help,?", "produce help message" )
         ( "file-name,F", boost::program_options::value<std::string>(),  "the file to be reviewed" )
+        ( "history-file-name,H", boost::program_options::value<std::string>(),  "history" )
+        ( "review-file-name,R", boost::program_options::value<std::string>(),  ".review, history cache" )
         ( "config-file,C", boost::program_options::value<std::string>()->default_value( "review.cfg" ),  "config file" )
-        ( "display-mode,M", boost::program_options::value<std::string>()->default_value( "all" ),  "all / question-only / answer-only" )
-        ( "review-time-span-list", boost::program_options::value< std::vector<std::string> >()->multitoken(),  "review time span list" )
+        ( "display-mode,M", boost::program_options::value<std::string>()->default_value( "all" ),  "(NOT_IMPLEMENT_YET) all / question-only / answer-only" )
+        ( "review-time-span-list,T", boost::program_options::value< std::vector<std::string> >()->multitoken(),  "review time span list" )
         ( "minimal-review-time", boost::program_options::value<size_t>()->default_value( 500 ),  "in miniseconds" )
-        ( "collect-interval", boost::program_options::value<size_t>()->default_value( 60 ),  "collect reviewing strings time interval (in seconds)" )
         ( "max-cache-size", boost::program_options::value<size_t>()->default_value( 100 ),  "normally write to .review, write to .history every max-cache-size times" )
-        ( "auto-update-interval", boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
+        ( "auto-update-interval,A", boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
         ;
 
     desc.add( Log::get_description() );

@@ -11,11 +11,17 @@ struct Order
 
     bool operator()( size_t lhs, size_t rhs )
     {
+        size_t lr = history->get_review_round(lhs);
+        size_t rr = history->get_review_round(rhs);
         std::time_t lt = history->get_last_review_time( lhs );
         std::time_t rt = history->get_last_review_time( rhs );
         const std::string& ls = loader->get_string( lhs );
         const std::string& rs = loader->get_string( rhs );
-        return( lt < rt ) || ( lt == rt && ls.size() < rs.size() ) || ( lt == rt && ls.size() == rs.size() && ls < rs );
+        return
+            ( lr < rr ) ||
+            ( lr == rr && rt < lt ) ||
+            ( lr == rr && lt == rt && ls.size() < rs.size() ) ||
+            ( lr == rr && lt == rt && ls.size() == rs.size() && ls < rs );
     }
 
     Loader* loader;
@@ -74,6 +80,13 @@ ReviewString ReviewManager::get_next()
     set_title();
     m_review_history.push_back( hash );
     m_history->save_history( hash );
+
+    if ( m_reviewing_set.empty() )
+    {
+        m_history->write_history();
+        m_history->clean_review_cache();
+    }
+
     return ReviewString( hash, m_loader, m_history );
 }
 
