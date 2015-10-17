@@ -62,6 +62,8 @@ void Loader::reload()
     for ( std::string s; std::getline( is, s ); )
     {
         boost::trim(s);
+        boost::replace_all( s, "\\n", "\n" );
+        boost::replace_all( s, "\\t", "\t" );
 
         if ( s.empty() || '#' == s[0] )
         {
@@ -90,6 +92,7 @@ size_t Loader::string_hash( const std::string& str )
         "¡¡", "£¬", "¡£", "¡¢", "£¿", "£¡", "£»", "£º", "¡¤", "£®", "¡°", "¡±", "¡®", "¡¯",
         "£à", "£­", "£½", "¡«", "£À", "££", "£¤", "£¥", "£ª", "£ß", "£«", "£ü", "¡ª", "¡ª¡ª",  "¡­", "¡­¡­",
         "¡¶", "¡·", "£¨", "£¨", "¡¾", "¡¿", "¡¸", "¡¹", "¡º", "¡»", "¡¼", "¡½", "¡´", "¡µ", "£û", "£ý",
+        "\\n", "\\t", "\\nt"
     };
 
     for ( size_t i = 0; i < sizeof(chinese_chars) / sizeof(char*); ++i )

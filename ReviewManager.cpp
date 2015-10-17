@@ -30,7 +30,9 @@ struct Order
 
 
 ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
-    : m_variables_map( vm )
+    : m_variables_map( vm ),
+      m_review_mode( forward ),
+      m_backward_index( 0 )
 {
     m_minimal_review_time = vm["minimal-review-time"].as<size_t>() * 1000 * 1000;
     m_auto_update_interval = vm["auto-update-interval"].as<size_t>();
@@ -56,7 +58,22 @@ void ReviewManager::review()
         {
             t.start();
             c = s.review();
-            c = wait_for_input();
+
+            if ( c.empty() )
+            {
+                c = wait_for_input();
+            }
+
+            while ( c == "previous" || c == "p" || c == "back" || c == "b" )
+            {
+                system( "CLS" );
+                c = get_previous().review();
+
+                if ( c.empty() )
+                {
+                    c = wait_for_input();
+                }
+            }
         }
         while ( t.elapsed().wall < m_minimal_review_time );
     }
@@ -67,11 +84,13 @@ ReviewString ReviewManager::get_next()
 {
     boost::unique_lock<boost::mutex> lock( m_mutex );
 
+    m_review_mode = forward;
+
     update();
 
     if ( m_reviewing_list.empty() )
     {
-        return ReviewString();;
+        return ReviewString();
     }
 
     size_t hash = m_reviewing_list.front();
@@ -88,6 +107,38 @@ ReviewString ReviewManager::get_next()
     }
 
     return ReviewString( hash, m_loader, m_history );
+}
+
+
+ReviewString ReviewManager::get_previous()
+{
+    boost::unique_lock<boost::mutex> lock( m_mutex );
+
+    if ( m_review_history.empty() )
+    {
+        return ReviewString();
+    }
+
+    if ( m_review_mode == forward )
+    {
+        m_review_mode = backward;
+
+        if ( m_review_history.size() == 1 )
+        {
+            m_backward_index = 0;
+        }
+        else
+        {
+            m_backward_index = m_review_history.size() - 1;
+        }
+    }
+
+    if ( 0 < m_backward_index )
+    {
+        m_backward_index--;
+    }
+
+    return ReviewString( m_review_history[m_backward_index], m_loader, m_history );
 }
 
 
