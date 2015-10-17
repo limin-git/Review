@@ -9,19 +9,26 @@ struct Order
 {
     Order( Loader* l, History* h ) : loader(l), history(h) {}
 
-    bool operator()( size_t lhs, size_t rhs )
+    bool operator()( size_t lhs, size_t rhs ) const
     {
         size_t lr = history->get_review_round(lhs);
         size_t rr = history->get_review_round(rhs);
         std::time_t lt = history->get_last_review_time( lhs );
         std::time_t rt = history->get_last_review_time( rhs );
-        const std::string& ls = loader->get_string( lhs );
-        const std::string& rs = loader->get_string( rhs );
-        return
-            ( lr < rr ) ||
-            ( lr == rr && rt < lt ) ||
-            ( lr == rr && lt == rt && ls.size() < rs.size() ) ||
-            ( lr == rr && lt == rt && ls.size() == rs.size() && ls < rs );
+
+        if ( ( lt < rr ) || ( lr == rr && rt < lt ) )
+        {
+            return true;
+        }
+        else
+        {
+            const std::string& ls = loader->get_string( lhs );
+            const std::string& rs = loader->get_string( rhs );
+            return
+                ( lr == rr && lt == rt && ls.size() < rs.size() ) ||
+                ( lr == rr && lt == rt && ls.size() == rs.size() && ls < rs );
+
+        }
     }
 
     Loader* loader;

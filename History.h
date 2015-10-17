@@ -11,11 +11,10 @@ public:
     void initialize();
     void save_history( size_t hash );
     void synchronize_history( const std::set<size_t>& hashes );
-    std::time_t get_last_review_time( size_t hash );
-    size_t get_review_round( size_t hash );
-    time_list& get_times( size_t hash ) { return m_history[hash]; }
-    const history_type& get_history() { return m_history; }
     std::set<size_t> get_expired();
+    size_t get_review_round( size_t hash ) { return m_history[hash].size(); }
+    time_list& get_times( size_t hash ) { return m_history[hash]; }
+    std::time_t get_last_review_time( size_t hash ) { time_list& t = m_history[hash]; return t.empty() ? 0 : t.back(); }
 
 public:
 
