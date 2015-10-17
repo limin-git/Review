@@ -50,12 +50,15 @@ History::History( const boost::program_options::variables_map& vm )
         {
             const char* s[] =
             {
-                "0 seconds",
-                "7 minutes",    "30 minutes",   "30 minutes",   "30 minutes",   "1 hours",      "1 hours",      "1 hours",
+                "0 seconds",    "7 minutes",    "30 minutes",   "30 minutes",   "1 hours",      "1 hours",      "1 hours",
                 "1 hours",      "2 hours",      "3 hours",      "4 hours",      "5 hours",      "6 hours",      "7 hours",
                 "8 hours",      "9 hours",      "10 hours",     "11 hours",     "12 hours",     "13 hours",     "14 hours",
+                "15 hours",     "16 hours",     "17 hours",     "18 hours",     "19 hours",     "20 hours",     "21 hours",
                 "24 hours",     "48 hours",     "72 hours",     "96 hours",     "120 hours",    "144 hours",    "168 hours",
-                "192 hours",    "216 hours",    "240 hours",    "264 hours",    "288 hours",    "312 hours",    "336 hours"
+                "192 hours",    "216 hours",    "240 hours",    "264 hours",    "288 hours",    "312 hours",    "336 hours",
+                "360 hours",    "384 hours",    "408 hours",    "432 hours",    "456 hours",    "480 hours",    "504 hours",
+                "528 hours",    "552 hours",    "576 hours",    "600 hours",    "624 hours",    "648 hours",    "672 hours",
+                "696 hours",    "720 hours",    "744 hours",    "768 hours",    "792 hours",    "816 hours",    "840 hours"
             };
 
             string_list.assign( s, s + sizeof(s) / sizeof(char*) );
