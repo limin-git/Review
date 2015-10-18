@@ -10,6 +10,7 @@ ReviewString::ReviewString( size_t hash, Loader* loader, History* history )
       m_loader( loader ),
       m_history( history )
 {
+    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
 }
 
 
@@ -62,5 +63,9 @@ std::string ReviewString::review()
         std::cout << "\t" << s << std::flush;
     }
 
+    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - "
+        << s << std::endl
+        << "(round: " << m_history->get_review_round( m_hash ) << ") "
+        << Utility::get_time_list_string( m_history->get_times( m_hash ) );
     return "";
 }

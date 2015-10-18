@@ -47,7 +47,7 @@ ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
     m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
     m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
 
-    m_minimal_review_time = vm["minimal-review-time"].as<size_t>() * 1000 * 1000;
+    m_minimal_review_time = vm["minimal-review-time"].as<boost::timer::nanosecond_type>() * 1000 * 1000;
     m_auto_update_interval = vm["auto-update-interval"].as<size_t>();
     m_loader = new Loader( vm );
     m_history = new History( vm );
@@ -69,6 +69,8 @@ void ReviewManager::review()
 
         do
         {
+            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin do";
+
             t.start();
             c = s.review();
 
@@ -87,6 +89,8 @@ void ReviewManager::review()
                     c = wait_for_input();
                 }
             }
+
+            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end do";
         }
         while ( t.elapsed().wall < m_minimal_review_time );
     }
@@ -95,6 +99,8 @@ void ReviewManager::review()
 
 ReviewString ReviewManager::get_next()
 {
+    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin";
+
     boost::unique_lock<boost::mutex> lock( m_mutex );
 
     m_review_mode = forward;
@@ -119,6 +125,7 @@ ReviewString ReviewManager::get_next()
         m_history->clean_review_cache();
     }
 
+    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
     return ReviewString( hash, m_loader, m_history );
 }
 
@@ -180,6 +187,8 @@ void ReviewManager::set_title()
 
 void ReviewManager::update()
 {
+    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin";
+
     const std::set<size_t>& all = m_loader->get_string_hash_set();
 
     if ( m_all != all )
@@ -200,6 +209,8 @@ void ReviewManager::update()
         set_title();
         BOOST_LOG(m_log_test) << __FUNCTION__ << ":" << std::endl << get_hash_list_string( m_reviewing_list );
     }
+
+    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
 }
 
 
@@ -212,8 +223,11 @@ void ReviewManager::update_thread()
         boost::this_thread::sleep_for( wait_for );
 
         {
+            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin";
+            BOOST_LOG(m_log_debug) << __FUNCTION__;
             boost::unique_lock<boost::mutex> lock( m_mutex );
             update();
+            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
         }
     }
 }

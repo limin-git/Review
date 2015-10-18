@@ -17,7 +17,7 @@ int _tmain(int argc, _TCHAR* argv[])
         ( "config-file,C", boost::program_options::value<std::string>()->default_value( "review.cfg" ),  "config file" )
         ( "display-mode,M", boost::program_options::value<std::string>()->default_value( "all" ),  "(NOT_IMPLEMENT_YET) all / question-only / answer-only" )
         ( "review-time-span-list,T", boost::program_options::value< std::vector<std::string> >()->multitoken(),  "review time span list" )
-        ( "minimal-review-time", boost::program_options::value<size_t>()->default_value( 500 ),  "in miniseconds" )
+        ( "minimal-review-time", boost::program_options::value<boost::timer::nanosecond_type>()->default_value( 500 ),  "in miniseconds" )
         ( "max-cache-size", boost::program_options::value<size_t>()->default_value( 100 ),  "normally write to .review, write to .history every max-cache-size times" )
         ( "auto-update-interval,A", boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
         ;

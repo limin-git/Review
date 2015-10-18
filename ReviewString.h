@@ -15,4 +15,5 @@ public:
     size_t m_hash;
     Loader* m_loader;
     History* m_history;
+    boost::log::sources::logger m_log_debug;
 };

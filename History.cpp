@@ -50,10 +50,8 @@ History::History( const boost::program_options::variables_map& vm )
         {
             const char* s[] =
             {
-                "0 seconds",    "7 minutes",    "30 minutes",   "30 minutes",   "1 hours",      "1 hours",      "1 hours",
-                "1 hours",      "2 hours",      "3 hours",      "4 hours",      "5 hours",      "6 hours",      "7 hours",
-                "8 hours",      "9 hours",      "10 hours",     "11 hours",     "12 hours",     "13 hours",     "14 hours",
-                "15 hours",     "16 hours",     "17 hours",     "18 hours",     "19 hours",     "20 hours",     "21 hours",
+                "0 seconds",    "7 minutes",    "30 minutes",   "30 minutes",   "1 hours",      "3 hours",      "5 hours",
+                "7 hours",      "9 hours",      "11 hours",     "13 hours",     "15 hours",     "17 hours",     "19 hours",
                 "24 hours",     "48 hours",     "72 hours",     "96 hours",     "120 hours",    "144 hours",    "168 hours",
                 "192 hours",    "216 hours",    "240 hours",    "264 hours",    "288 hours",    "312 hours",    "336 hours",
                 "360 hours",    "384 hours",    "408 hours",    "432 hours",    "456 hours",    "480 hours",    "504 hours",
@@ -108,7 +106,7 @@ void History::initialize()
         write_history();
     }
 
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is uptodate.\n" << Utility::get_history_string( m_history );
+    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is updated.\n" << Utility::get_history_string( m_history );
 }
 
 
@@ -203,6 +201,7 @@ history_type History::load_history_from_file( const std::string& file_name )
         }
     }
 
+    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << file_name << std::endl << Utility::get_history_string( history );
     return history;
 }
 
@@ -224,6 +223,16 @@ void History::merge_history( const history_type& history )
                 history_times.push_back( times[i] );
                 last_time = times[i];
                 round++;
+            }
+            else
+            {
+                BOOST_LOG(m_log_debug) << __FUNCTION__ << " -"
+                    << " ignore review time: " << Utility::time_string( times[i] )
+                    << " round = " << round
+                    << " last-review-time = " << last_time
+                    << " elapsed = " << Utility::time_duration_string( times[i] - last_time )
+                    << " span = " << Utility::time_duration_string( m_review_spans[round] )
+                    ;
             }
         }
     }
@@ -315,6 +324,7 @@ void History::clean_review_cache()
     if ( boost::filesystem::exists( m_review_name ) )
     {
         boost::filesystem::remove( m_review_name );
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "remove file: " << m_review_name;
     }
 
     m_cache_size = 0;

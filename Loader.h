@@ -15,7 +15,7 @@ public:
 
 public:
 
-    static size_t string_hash( const std::string& str );
+    size_t string_hash( const std::string& str );
 
 public:
 

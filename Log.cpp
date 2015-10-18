@@ -8,9 +8,10 @@ boost::program_options::options_description Log::get_description()
     boost::program_options::options_description desc( "Log Options" );
     desc.add_options()
         ( "log-ini", boost::program_options::value<std::string>(), "log configuration file" )
-        ( "log-file-name", boost::program_options::value<std::string>(), "log file name." )
+        ( "log-file", boost::program_options::value<std::string>(), "log file name." )
         ( "log-rotation-size", boost::program_options::value<size_t>(), "log rotation size." )
-        ( "log-debug-levels", boost::program_options::value< std::vector<std::string> >()->multitoken(), "error, info, debug, trace, *" )
+        ( "log-levels", boost::program_options::value< std::vector<std::string> >()->multitoken(), "error, info, debug, trace, *" )
+        ( "log-no-console", "no console output" )
         ;
 
     return desc;
@@ -30,9 +31,9 @@ void Log::initialize( const boost::program_options::variables_map& vm )
         log_ini = vm["log-ini"].as<std::string>();
     }
 
-    if ( vm.count( "log-file-name" ) )
+    if ( vm.count( "log-file" ) )
     {
-        log_file_name = vm["log-file-name"].as<std::string>();
+        log_file_name = vm["log-file"].as<std::string>();
     }
 
     if ( vm.count( "log-rotation-size" ) )
@@ -49,9 +50,6 @@ void Log::initialize( const boost::program_options::variables_map& vm )
         }
         else
         {
-            // add sinks: console sink, file sink
-            boost::shared_ptr< sinks::synchronous_sink<sinks::text_ostream_backend> > console_sink = add_console_log();
-
             // set formatter
             formatter frmttr = expressions::stream
                 << "\t"
@@ -88,9 +86,9 @@ void Log::initialize( const boost::program_options::variables_map& vm )
 
             std::vector<std::string> debug_levels;
 
-            if ( vm.count( "log-debug-levels" ) )
+            if ( vm.count( "log-levels" ) )
             {
-                debug_levels = vm["log-debug-levels"].as< std::vector<std::string> >();
+                debug_levels = vm["log-levels"].as< std::vector<std::string> >();
             }
 
             bool with_error = std::find( debug_levels.begin(), debug_levels.end(), "error" )    != debug_levels.end();
@@ -109,8 +107,13 @@ void Log::initialize( const boost::program_options::variables_map& vm )
                 ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "TEST" &&  ( with_test  || with_all ) )
                 ;
 
-            console_sink->set_formatter( frmttr );
-            console_sink->set_filter( fltr );
+            if ( ! vm.count( "log-no-console" ) )
+            {
+                // add sinks: console sink, file sink
+                boost::shared_ptr< sinks::synchronous_sink<sinks::text_ostream_backend> > console_sink = add_console_log();
+                console_sink->set_formatter( frmttr );
+                console_sink->set_filter( fltr );
+            }
 
             if ( false == log_file_name.empty() )
             {

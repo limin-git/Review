@@ -42,7 +42,7 @@ public:
     EReviewDirection m_review_mode;
     size_t m_backward_index;
     std::vector<size_t> m_review_history;
-    size_t m_minimal_review_time;
+    boost::timer::nanosecond_type m_minimal_review_time;
     size_t m_auto_update_interval;
     boost::log::sources::logger m_log;
     boost::log::sources::logger m_log_debug;
