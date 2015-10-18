@@ -67,6 +67,14 @@ int _tmain(int argc, _TCHAR* argv[])
         ReviewManager rm( vm );
         rm.review();
     }
+    catch ( boost::filesystem::filesystem_error& e )
+    {
+        std::cout << e.what() << std::endl;
+    }
+    catch ( std::exception& e )
+    {
+        std::cout << e.what() << std::endl;
+    }
     catch ( ... )
     {
         std::cout << "caught exception, exit." << std::endl;

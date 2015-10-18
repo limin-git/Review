@@ -26,6 +26,11 @@ public:
 
 public:
 
+    std::ostream& output_hash_list( std::ostream& os, const std::list<size_t>& l );
+    std::string get_hash_list_string( const std::list<size_t>& l );
+
+public:
+
     boost::mutex m_mutex;
     std::string m_file_name;
     std::string m_history_name;
@@ -39,5 +44,9 @@ public:
     std::vector<size_t> m_review_history;
     size_t m_minimal_review_time;
     size_t m_auto_update_interval;
+    boost::log::sources::logger m_log;
+    boost::log::sources::logger m_log_debug;
+    boost::log::sources::logger m_log_trace;
+    boost::log::sources::logger m_log_test;
     boost::program_options::variables_map m_variables_map;
 };

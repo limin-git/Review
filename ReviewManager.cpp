@@ -3,6 +3,7 @@
 #include "History.h"
 #include "Loader.h"
 #include "ReviewString.h"
+#include "Utility.h"
 
 
 struct Order
@@ -25,9 +26,10 @@ struct Order
             const std::string& ls = loader->get_string( lhs );
             const std::string& rs = loader->get_string( rhs );
             return
+                ( lr < rr ) ||
+                ( lr == rr && rt < lt ) ||
                 ( lr == rr && lt == rt && ls.size() < rs.size() ) ||
                 ( lr == rr && lt == rt && ls.size() == rs.size() && ls < rs );
-
         }
     }
 
@@ -41,6 +43,10 @@ ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
       m_review_mode( forward ),
       m_backward_index( 0 )
 {
+    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
+    m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
+    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
+
     m_minimal_review_time = vm["minimal-review-time"].as<size_t>() * 1000 * 1000;
     m_auto_update_interval = vm["auto-update-interval"].as<size_t>();
     m_loader = new Loader( vm );
@@ -187,12 +193,12 @@ void ReviewManager::update()
     if ( m_reviewing_set != expired )
     {
         m_reviewing_set = expired;
-        m_reviewing_list.clear();
         m_reviewing_list.assign( m_reviewing_set.begin(), m_reviewing_set.end() );
 
         static Order order(m_loader, m_history);
         m_reviewing_list.sort( order );
         set_title();
+        BOOST_LOG(m_log_test) << __FUNCTION__ << ":" << std::endl << get_hash_list_string( m_reviewing_list );
     }
 }
 
@@ -210,4 +216,33 @@ void ReviewManager::update_thread()
             update();
         }
     }
+}
+
+
+std::ostream& ReviewManager::output_hash_list( std::ostream& os, const std::list<size_t>& l )
+{
+    for ( std::list<size_t>::const_iterator it = l.begin(); it != l.end(); ++it )
+    {
+        size_t hash = *it;
+        std::time_t t = m_history->get_last_review_time( hash );
+        size_t r = m_history->get_review_round( hash );
+        const std::string& s = m_loader->get_string( hash );
+
+        os 
+            << r << "\t"
+            << Utility::time_string( t ) << "\t"
+            << s.size() << "\t"
+            << s << "\n";
+            ;
+    }
+
+    return os;
+}
+
+
+std::string ReviewManager::get_hash_list_string( const std::list<size_t>& l )
+{
+    std::stringstream strm;
+    output_hash_list( strm, l );
+    return strm.str();
 }
