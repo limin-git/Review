@@ -3,15 +3,15 @@
 #include "Utility.h"
 
 
+extern boost::log::sources::logger m_log;
+extern boost::log::sources::logger m_log_debug;
+
+
 Loader::Loader( const boost::program_options::variables_map& vm )
     : m_variables_map( vm ),
       m_last_write_time( 0 )
 {
     m_file_name = vm["file-name"].as<std::string>();
-
-    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
-    m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
-    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
 }
 
 
@@ -33,7 +33,7 @@ const std::string& Loader::get_string( size_t hash )
         return it->second;
     }
 
-    static std::string empty;
+    static std::string empty( "<not-found>" );
     return empty;
 }
 
@@ -79,7 +79,7 @@ void Loader::reload()
 
     if ( m_string_hash_set != string_hash_set )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "old-size" << m_string_hash_set.size() << ", new-size = " << string_hash_set.size();
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "old-size = " << m_string_hash_set.size() << ", new-size = " << string_hash_set.size();
         m_string_hash_set = string_hash_set;
         m_hash_2_string_map = hash_2_string_map;
     }

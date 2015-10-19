@@ -6,6 +6,11 @@
 #include "Utility.h"
 
 
+extern boost::log::sources::logger m_log_debug;
+extern boost::log::sources::logger m_log_trace;
+extern boost::log::sources::logger m_log_test;
+
+
 struct Order
 {
     Order( Loader* l, History* h ) : loader(l), history(h) {}
@@ -43,10 +48,6 @@ ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
       m_review_mode( forward ),
       m_backward_index( 0 )
 {
-    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
-    m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
-    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
-
     m_minimal_review_time = vm["minimal-review-time"].as<boost::timer::nanosecond_type>() * 1000 * 1000;
     m_auto_update_interval = vm["auto-update-interval"].as<size_t>();
     m_loader = new Loader( vm );
@@ -207,6 +208,7 @@ void ReviewManager::update()
         static Order order(m_loader, m_history);
         m_reviewing_list.sort( order );
         set_title();
+        BOOST_LOG(m_log_trace) << __FUNCTION__ << " - sort " << m_reviewing_list.size();
         BOOST_LOG(m_log_test) << __FUNCTION__ << ":" << std::endl << get_hash_list_string( m_reviewing_list );
     }
 

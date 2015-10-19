@@ -3,6 +3,11 @@
 #include "Utility.h"
 
 
+extern boost::log::sources::logger m_log;
+extern boost::log::sources::logger m_log_debug;
+extern boost::log::sources::logger m_log_trace;
+
+
 History::History( const boost::program_options::variables_map& vm )
     : m_variables_map( vm ),
       m_max_cache_size( 100 ),
@@ -32,10 +37,6 @@ History::History( const boost::program_options::variables_map& vm )
     {
         m_max_cache_size = vm["max-cache-size"].as<size_t>();
     }
-
-    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
-    m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
-    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
 
     {
         std::stringstream strm;

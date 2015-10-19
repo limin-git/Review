@@ -44,9 +44,5 @@ public:
     std::vector<size_t> m_review_history;
     boost::timer::nanosecond_type m_minimal_review_time;
     size_t m_auto_update_interval;
-    boost::log::sources::logger m_log;
-    boost::log::sources::logger m_log_debug;
-    boost::log::sources::logger m_log_trace;
-    boost::log::sources::logger m_log_test;
     boost::program_options::variables_map m_variables_map;
 };

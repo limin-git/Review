@@ -3,6 +3,14 @@
 BOOST_LOG_ATTRIBUTE_KEYWORD(debug_level_attribute, "Level", std::string)
 
 
+boost::log::sources::logger m_log;
+boost::log::sources::logger m_log_error;
+boost::log::sources::logger m_log_info;
+boost::log::sources::logger m_log_debug;
+boost::log::sources::logger m_log_trace;
+boost::log::sources::logger m_log_test;
+
+
 boost::program_options::options_description Log::get_description()
 {
     boost::program_options::options_description desc( "Log Options" );
@@ -21,6 +29,12 @@ boost::program_options::options_description Log::get_description()
 void Log::initialize( const boost::program_options::variables_map& vm )
 {
     using namespace boost::log;
+
+    m_log_error.add_attribute( "Level", boost::log::attributes::constant<std::string>( "ERROR" ) );
+    m_log_info.add_attribute( "Level", boost::log::attributes::constant<std::string>( "INFO" ) );
+    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
+    m_log_trace.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TRACE" ) );
+    m_log_test.add_attribute( "Level", boost::log::attributes::constant<std::string>( "TEST" ) );
 
     std::string log_ini;
     std::string log_file_name;

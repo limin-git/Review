@@ -36,9 +36,5 @@ public:
     size_t m_max_cache_size;
     size_t m_cache_size;
     time_list m_review_spans;
-    boost::log::sources::logger m_log;
-    boost::log::sources::logger m_log_debug;
-    boost::log::sources::logger m_log_trace;
-    boost::log::sources::logger m_log_test;
     boost::program_options::variables_map m_variables_map;
 };

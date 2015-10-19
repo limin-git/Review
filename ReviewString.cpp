@@ -5,12 +5,14 @@
 #include "Utility.h"
 
 
+extern boost::log::sources::logger m_log_debug;
+
+
 ReviewString::ReviewString( size_t hash, Loader* loader, History* history )
     : m_hash( hash ),
       m_loader( loader ),
       m_history( history )
 {
-    m_log_debug.add_attribute( "Level", boost::log::attributes::constant<std::string>( "DEBUG" ) );
 }
 
 
@@ -56,6 +58,10 @@ std::string ReviewString::review()
             }
 
             std::cout << "\t" << a << std::flush;
+        }
+        else
+        {
+            std::cout << "bad format: question " << ( q.empty() ? "is" : "is not") << " empty, answer " << (a.empty() ? "is." : "is not") << " empty. " << s << std::endl; 
         }
     }
     else
