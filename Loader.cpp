@@ -5,6 +5,7 @@
 
 extern boost::log::sources::logger m_log;
 extern boost::log::sources::logger m_log_debug;
+extern boost::log::sources::logger m_log_trace;
 
 
 Loader::Loader( const boost::program_options::variables_map& vm )
@@ -79,7 +80,11 @@ void Loader::reload()
 
     if ( m_string_hash_set != string_hash_set )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "old-size = " << m_string_hash_set.size() << ", new-size = " << string_hash_set.size();
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " 
+            << "old-size = " << m_string_hash_set.size()
+            << ", new-size = " << string_hash_set.size()
+            << get_difference( m_string_hash_set, m_hash_2_string_map, string_hash_set, hash_2_string_map )
+            ;
         m_string_hash_set = string_hash_set;
         m_hash_2_string_map = hash_2_string_map;
     }
@@ -105,6 +110,40 @@ size_t Loader::string_hash( const std::string& str )
     s.erase( std::remove_if( s.begin(), s.end(), boost::is_any_of( " \t\"\',.?:;!-/#()|<>{}[]~`@$%^&*+\n\t" ) ), s.end() );
     boost::to_lower(s);
     static boost::hash<std::string> string_hasher;
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "hash = " << string_hasher(s) << " \t" << s;
+    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << "hash = " << string_hasher(s) << " \t" << s;
     return string_hasher(s);
+}
+
+
+std::string Loader::get_difference( const std::set<size_t>& os, const std::map<size_t, std::string>& om, const std::set<size_t>& ns, const std::map<size_t, std::string>& nm  )
+{
+    std::set<size_t> removed;
+    std::set_difference( os.begin(), os.end(), ns.begin(), ns.end(), std::inserter(removed, removed.begin()) );
+    
+    std::set<size_t> added;
+    std::set_difference( ns.begin(), ns.end(), os.begin(), os.end(), std::inserter(added, added.begin()) );
+
+    std::stringstream strm;
+
+    for ( std::set<size_t>::iterator it = removed.begin(); it != removed.end(); ++it )
+    {
+        std::map<size_t, std::string>::const_iterator find_it = om.find( *it );
+
+        if ( find_it != om.end() )
+        {
+            strm << std::endl << "remove: " << find_it->second;
+        }
+    }
+
+    for ( std::set<size_t>::iterator it = added.begin(); it != added.end(); ++it )
+    {
+        std::map<size_t, std::string>::const_iterator find_it = nm.find( *it );
+
+        if ( find_it != nm.end() )
+        {
+            strm << std::endl << "add: " << find_it->second;
+        }
+    }
+
+    return strm.str();
 }

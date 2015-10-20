@@ -31,6 +31,10 @@ public:
 
 public:
 
+    std::string get_new_expired_string( const std::set<size_t>& os,  const std::set<size_t>& ns );
+
+public:
+
     boost::mutex m_mutex;
     std::string m_file_name;
     std::string m_history_name;

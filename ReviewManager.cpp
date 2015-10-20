@@ -202,13 +202,18 @@ void ReviewManager::update()
 
     if ( m_reviewing_set != expired )
     {
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - "
+            << "old-size=" << m_reviewing_list.size()
+            << ", new-size=" << expired.size() << ""
+            << get_new_expired_string( m_reviewing_set, expired )
+            ;
         m_reviewing_set = expired;
         m_reviewing_list.assign( m_reviewing_set.begin(), m_reviewing_set.end() );
 
         static Order order(m_loader, m_history);
         m_reviewing_list.sort( order );
         set_title();
-        BOOST_LOG(m_log_trace) << __FUNCTION__ << " - sort " << m_reviewing_list.size();
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - sort " << m_reviewing_list.size();
         BOOST_LOG(m_log_test) << __FUNCTION__ << ":" << std::endl << get_hash_list_string( m_reviewing_list );
     }
 
@@ -260,5 +265,26 @@ std::string ReviewManager::get_hash_list_string( const std::list<size_t>& l )
 {
     std::stringstream strm;
     output_hash_list( strm, l );
+    return strm.str();
+}
+
+
+std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  const std::set<size_t>& ns )
+{
+    std::set<size_t> added;
+    std::set_difference( ns.begin(), ns.end(), os.begin(), os.end(), std::inserter( added, added.begin() ) );
+
+    std::stringstream strm;
+
+    for ( std::set<size_t>::iterator it = added.begin(); it != added.end(); ++it )
+    {
+        size_t hash = *it;
+        size_t round = m_history->get_review_round( hash );
+        std::time_t last_review = m_history->get_last_review_time( hash );
+        std::time_t elapsed = std::time(0) - last_review;
+        const std::string& s = m_loader->get_string( *it );
+        strm << std::endl << "new expired " << round << " (" << Utility::time_duration_string(elapsed) << ") " << s;
+    }
+
     return strm.str();
 }

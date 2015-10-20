@@ -23,7 +23,7 @@ namespace Utility
 
             for ( size_t i = 1; i < times.size(); ++i )
             {
-                os << " " << time_duration_string( times[i] - times[i - 1] );
+                os << ", " << time_duration_string( times[i] - times[i - 1] );
             }
 
             os << std::endl;

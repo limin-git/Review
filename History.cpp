@@ -120,13 +120,16 @@ void History::save_history( size_t hash )
     if ( m_cache_size == 0 )
     {
         m_review_stream.open( m_review_name.c_str(), std::ios::app );
+
+        if ( ! m_review_stream )
+        {
+            BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open for append: " << m_review_name;
+            return;
+        }
+
+        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "created a file for cache: " << m_review_name;
     }
 
-    if ( ! m_review_stream )
-    {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open for append: " << m_review_name;
-        return;
-    }
 
     m_review_stream << hash << "\t" << current_time << std::endl;
 
@@ -136,6 +139,7 @@ void History::save_history( size_t hash )
     }
 
     m_cache_size++;
+    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "cache-size = " << m_cache_size;
 
     if ( m_max_cache_size <= m_cache_size )
     {

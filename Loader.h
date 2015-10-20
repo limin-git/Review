@@ -15,7 +15,11 @@ public:
 
 public:
 
-    size_t string_hash( const std::string& str );
+    static size_t string_hash( const std::string& str );
+
+public:
+
+    static std::string get_difference( const std::set<size_t>& os, const std::map<size_t, std::string>& om, const std::set<size_t>& ns, const std::map<size_t, std::string>& nm  );
 
 public:
 
