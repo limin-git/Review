@@ -3,7 +3,7 @@
 #include "ReviewManager.h"
 
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
     system( "COLOR F0" );
 
@@ -20,6 +20,7 @@ int _tmain(int argc, _TCHAR* argv[])
         ( "minimal-review-time", boost::program_options::value<boost::timer::nanosecond_type>()->default_value( 500 ),  "in miniseconds" )
         ( "max-cache-size", boost::program_options::value<size_t>()->default_value( 100 ),  "normally write to .review, write to .history every max-cache-size times" )
         ( "auto-update-interval,A", boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
+        ( "speech-path", boost::program_options::value<std::string>(), "speech path" )
         ;
 
     desc.add( Log::get_description() );

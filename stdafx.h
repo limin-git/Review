@@ -7,8 +7,8 @@
 
 #include "targetver.h"
 
-#include <stdio.h>
-#include <tchar.h>
+//#include <stdio.h>
+//#include <tchar.h>
 
 
 
@@ -47,3 +47,4 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/timer/timer.hpp>
 #include <boost/chrono/io/duration_io.hpp>
+#include <boost/locale/encoding_utf.hpp>

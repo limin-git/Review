@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Utility.h"
+#include <dshow.h>
+#pragma comment(lib, "strmiids.lib") // For IID_IGraphBuilder, IID_IMediaControl, IID_IMediaEvent
 
 
 namespace Utility
@@ -96,6 +98,58 @@ namespace Utility
         #undef WRAP_ZERO
 
         return strm.str();
+    }
+
+
+    void play_sound( const std::string& file  )
+    {
+        static HRESULT com = ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
+
+        IGraphBuilder* graph = NULL;
+        IMediaControl* control = NULL;
+        IMediaEvent*   evnt = NULL;
+
+        ::CoCreateInstance( CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graph );
+        graph->QueryInterface( IID_IMediaControl, (void **)&control );
+        graph->QueryInterface( IID_IMediaEvent, (void **)&evnt );
+
+        HRESULT hr = graph->RenderFile( boost::locale::conv::utf_to_utf<wchar_t>(file).c_str(), NULL );
+
+        if ( SUCCEEDED(hr) )
+        {
+            hr = control->Run();
+
+            if ( SUCCEEDED(hr) )
+            {
+                long code;
+                evnt->WaitForCompletion( INFINITE, &code );
+            }
+        }
+
+        evnt->Release();
+        control->Release();
+        graph->Release();
+    }
+
+
+    void play_sounds( const std::vector<std::string>& files )
+    {
+        for ( size_t i = 0; i < files.size(); ++i )
+        {
+            play_sound( files[i] );
+        }
+    }
+
+
+    void play_sound_thread( const std::string& file )
+    {
+        boost::thread( boost::bind( &play_sound, file ) );
+    }
+
+
+    void play_sound_thread( const std::vector<std::string>& files )
+    {
+        boost::thread( boost::bind( &play_sounds, files ) );
     }
 
 }

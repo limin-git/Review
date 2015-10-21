@@ -11,4 +11,8 @@ namespace Utility
     std::string get_history_string( const history_type& history );
     std::ostream& output_time_list( std::ostream& os, const time_list& times );
     std::ostream& output_history( std::ostream& os, const history_type& history );
+    void play_sound( const std::string& file );
+    void play_sounds( const std::vector<std::string>& files );
+    void play_sound_thread( const std::string& file );
+    void play_sound_thread( const std::vector<std::string>& files );
 }

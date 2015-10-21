@@ -2,6 +2,7 @@
 #include "ReviewString.h"
 class Loader;
 class History;
+class Speech;
 
 
 class ReviewManager
@@ -40,6 +41,7 @@ public:
     std::string m_history_name;
     Loader* m_loader;
     History* m_history;
+    Speech* m_speech;
     std::set<size_t> m_all;
     std::set<size_t> m_reviewing_set;
     std::list<size_t> m_reviewing_list;

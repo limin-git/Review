@@ -2,6 +2,7 @@
 #include "ReviewManager.h"
 #include "History.h"
 #include "Loader.h"
+#include "Speech.h"
 #include "ReviewString.h"
 #include "Utility.h"
 
@@ -52,6 +53,7 @@ ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
     m_auto_update_interval = vm["auto-update-interval"].as<size_t>();
     m_loader = new Loader( vm );
     m_history = new History( vm );
+    m_speech = new Speech( vm );
 }
 
 
@@ -91,6 +93,13 @@ void ReviewManager::review()
                 }
             }
 
+            while ( c == "speak" || c == "speech" || c == "s" )
+            {
+                system( "CLS" );
+                s.speech();
+                c = wait_for_input();
+            }
+
             BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end do";
         }
         while ( t.elapsed().wall < m_minimal_review_time );
@@ -127,7 +136,7 @@ ReviewString ReviewManager::get_next()
     }
 
     BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
-    return ReviewString( hash, m_loader, m_history );
+    return ReviewString( hash, m_loader, m_history, m_speech );
 }
 
 
@@ -283,7 +292,7 @@ std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  
         std::time_t last_review = m_history->get_last_review_time( hash );
         std::time_t elapsed = std::time(0) - last_review;
         const std::string& s = m_loader->get_string( *it );
-        strm << std::endl << "new expired " << round << " (" << Utility::time_duration_string(elapsed) << ") " << s;
+        strm << std::endl << "expired: " << round << " (" << Utility::time_duration_string(elapsed) << ") " << s;
     }
 
     return strm.str();

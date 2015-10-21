@@ -204,6 +204,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Speech.h"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -258,6 +262,10 @@
 		</File>
 		<File
 			RelativePath=".\ReviewString.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Speech.cpp"
 			>
 		</File>
 		<File
