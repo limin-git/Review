@@ -4,6 +4,10 @@
 #pragma comment(lib, "strmiids.lib") // For IID_IGraphBuilder, IID_IMediaControl, IID_IMediaEvent
 
 
+extern boost::log::sources::logger m_log;
+extern boost::log::sources::logger m_log_test;
+
+
 namespace Utility
 {
 
@@ -103,32 +107,37 @@ namespace Utility
 
     void play_sound( const std::string& file  )
     {
-        static HRESULT com = ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
-
-        IGraphBuilder* graph = NULL;
-        IMediaControl* control = NULL;
-        IMediaEvent*   evnt = NULL;
-
-        ::CoCreateInstance( CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graph );
-        graph->QueryInterface( IID_IMediaControl, (void **)&control );
-        graph->QueryInterface( IID_IMediaEvent, (void **)&evnt );
-
-        HRESULT hr = graph->RenderFile( boost::locale::conv::utf_to_utf<wchar_t>(file).c_str(), NULL );
-
-        if ( SUCCEEDED(hr) )
+        try
         {
-            hr = control->Run();
+            IGraphBuilder* graph = NULL;
+            IMediaControl* control = NULL;
+            IMediaEvent*   evnt = NULL;
+
+            ::CoCreateInstance( CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graph );
+            graph->QueryInterface( IID_IMediaControl, (void **)&control );
+            graph->QueryInterface( IID_IMediaEvent, (void **)&evnt );
+
+            HRESULT hr = graph->RenderFile( boost::locale::conv::utf_to_utf<wchar_t>(file).c_str(), NULL );
 
             if ( SUCCEEDED(hr) )
             {
-                long code;
-                evnt->WaitForCompletion( INFINITE, &code );
-            }
-        }
+                hr = control->Run();
 
-        evnt->Release();
-        control->Release();
-        graph->Release();
+                if ( SUCCEEDED(hr) )
+                {
+                    long code;
+                    evnt->WaitForCompletion( INFINITE, &code );
+                }
+            }
+
+            evnt->Release();
+            control->Release();
+            graph->Release();
+        }
+        catch ( ... )
+        {
+            BOOST_LOG(m_log) << __FUNCTION__ << " - error " << file;
+        }
     }
 
 

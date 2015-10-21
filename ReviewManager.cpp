@@ -93,11 +93,9 @@ void ReviewManager::review()
                 }
             }
 
-            while ( c == "speak" || c == "speech" || c == "s" )
+            if ( c == "speak" || c == "speech" || c == "s" )
             {
-                system( "CLS" );
                 s.speech();
-                c = wait_for_input();
             }
 
             BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end do";

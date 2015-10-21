@@ -27,6 +27,8 @@ std::string ReviewString::review()
     }
 
     std::string s = m_loader->get_string( m_hash );
+    boost::erase_all( s, "{" );
+    boost::erase_all( s, "}" );
 
     if ( boost::starts_with( s, "[Q]" ) || boost::starts_with( s, "[q]" ) )
     {
@@ -71,6 +73,8 @@ std::string ReviewString::review()
         std::cout << "\t" << s << std::flush;
     }
 
+    speech();
+
     BOOST_LOG(m_log_debug) << __FUNCTION__ << " - "
         << s << std::endl
         << "(round: " << m_history->get_review_round( m_hash ) << ") "
@@ -81,12 +85,10 @@ std::string ReviewString::review()
 
 void ReviewString::speech()
 {
-    static const boost::regex e( "(?x)\\{(.*?)\\}" );
-    std::string s = m_loader->get_string( m_hash );
-
+    const std::string& s = m_loader->get_string( m_hash );
+    static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );
     boost::sregex_iterator it( s.begin(), s.end(), e );
     boost::sregex_iterator end;
-
     std::vector<std::string> words;
 
     for ( ; it != end; ++it )
@@ -94,5 +96,8 @@ void ReviewString::speech()
         words.push_back( boost::trim_copy(it->str(1)) );
     }
 
-    m_speech->play( words );
+    if ( ! words.empty() )
+    {
+        m_speech->play( words );
+    }
 }
