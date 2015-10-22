@@ -5,11 +5,7 @@
 #include "Speech.h"
 #include "ReviewString.h"
 #include "Utility.h"
-
-
-extern boost::log::sources::logger m_log_debug;
-extern boost::log::sources::logger m_log_trace;
-extern boost::log::sources::logger m_log_test;
+#include "Log.h"
 
 
 struct Order
@@ -72,7 +68,7 @@ void ReviewManager::review()
 
         do
         {
-            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin do";
+            LOG_TRACE << "begin do";
 
             t.start();
             c = s.review();
@@ -85,7 +81,9 @@ void ReviewManager::review()
             while ( c == "previous" || c == "p" || c == "back" || c == "b" )
             {
                 system( "CLS" );
-                c = get_previous().review();
+
+                s = get_previous();
+                c = s.review();
 
                 if ( c.empty() )
                 {
@@ -93,12 +91,12 @@ void ReviewManager::review()
                 }
             }
 
-            if ( c == "speak" || c == "speech" || c == "s" )
+            if ( c == "speak" || c == "play" || c == "s" )
             {
-                s.speech();
+                s.play_speech();
             }
 
-            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end do";
+            LOG_TRACE << "end do";
         }
         while ( t.elapsed().wall < m_minimal_review_time );
     }
@@ -107,7 +105,7 @@ void ReviewManager::review()
 
 ReviewString ReviewManager::get_next()
 {
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin";
+    LOG_TRACE << "begin";
 
     boost::unique_lock<boost::mutex> lock( m_mutex );
 
@@ -133,7 +131,7 @@ ReviewString ReviewManager::get_next()
         m_history->clean_review_cache();
     }
 
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
+    LOG_TRACE << "end";
     return ReviewString( hash, m_loader, m_history, m_speech );
 }
 
@@ -166,7 +164,7 @@ ReviewString ReviewManager::get_previous()
         m_backward_index--;
     }
 
-    return ReviewString( m_review_history[m_backward_index], m_loader, m_history );
+    return ReviewString( m_review_history[m_backward_index], m_loader, m_history, m_speech );
 }
 
 
@@ -195,7 +193,7 @@ void ReviewManager::set_title()
 
 void ReviewManager::update()
 {
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin";
+    LOG_TRACE << "begin";
 
     const std::set<size_t>& all = m_loader->get_string_hash_set();
 
@@ -209,7 +207,7 @@ void ReviewManager::update()
 
     if ( m_reviewing_set != expired )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - "
+        LOG_DEBUG
             << "old-size=" << m_reviewing_list.size()
             << ", new-size=" << expired.size() << ""
             << get_new_expired_string( m_reviewing_set, expired )
@@ -220,11 +218,11 @@ void ReviewManager::update()
         static Order order(m_loader, m_history);
         m_reviewing_list.sort( order );
         set_title();
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - sort " << m_reviewing_list.size();
-        BOOST_LOG(m_log_test) << __FUNCTION__ << ":" << std::endl << get_hash_list_string( m_reviewing_list );
+        LOG_DEBUG << "sort " << m_reviewing_list.size();
+        LOG_TEST<< std::endl << get_hash_list_string( m_reviewing_list );
     }
 
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
+    LOG_TRACE << "end";
 }
 
 
@@ -237,11 +235,11 @@ void ReviewManager::update_thread()
         boost::this_thread::sleep_for( wait_for );
 
         {
-            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - begin";
-            BOOST_LOG(m_log_debug) << __FUNCTION__;
+            LOG_TRACE << "begin";
+            LOG_DEBUG << "update thread";
             boost::unique_lock<boost::mutex> lock( m_mutex );
             update();
-            BOOST_LOG(m_log_trace) << __FUNCTION__ << " - end";
+            LOG_TRACE << "end";
         }
     }
 }

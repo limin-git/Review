@@ -257,10 +257,6 @@
 			>
 		</File>
 		<File
-			RelativePath=".\review.cfg"
-			>
-		</File>
-		<File
 			RelativePath=".\ReviewManager.cpp"
 			>
 		</File>
@@ -270,10 +266,6 @@
 		</File>
 		<File
 			RelativePath=".\Speech.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\test.txt"
 			>
 		</File>
 		<File

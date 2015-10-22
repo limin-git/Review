@@ -8,9 +8,9 @@ class ReviewString
 {
 public:
 
-    ReviewString( size_t hash = 0, Loader* loader = NULL, History* history = NULL, Speech* speech = NULL );
+    ReviewString( size_t hash = 0, Loader* loader = NULL, History* history = NULL, Speech* play = NULL );
     std::string review();
-    void speech();
+    void play_speech();
 
 public:
 

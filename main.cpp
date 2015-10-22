@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     if ( ! vm.count( "file-name" ) )
     {
-        BOOST_LOG(log) << "the file-name must be set";
+        LOG << "the file-name must be set";
         std::cout << desc << std::endl;
         return 0;
     }

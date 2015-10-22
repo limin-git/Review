@@ -11,6 +11,6 @@ public:
 
 public:
 
-    std::vector<boost::filesystem::path> m_path;
+    std::vector<boost::filesystem::path> m_paths;
     boost::program_options::variables_map m_variables_map;
 };

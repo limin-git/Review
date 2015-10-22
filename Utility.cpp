@@ -1,11 +1,8 @@
 #include "stdafx.h"
 #include "Utility.h"
+#include "Log.h"
 #include <dshow.h>
 #pragma comment(lib, "strmiids.lib") // For IID_IGraphBuilder, IID_IMediaControl, IID_IMediaEvent
-
-
-extern boost::log::sources::logger m_log;
-extern boost::log::sources::logger m_log_test;
 
 
 namespace Utility
@@ -136,7 +133,7 @@ namespace Utility
         }
         catch ( ... )
         {
-            BOOST_LOG(m_log) << __FUNCTION__ << " - error " << file;
+            LOG << "error " << file;
         }
     }
 

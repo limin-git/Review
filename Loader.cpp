@@ -1,11 +1,7 @@
 #include "stdafx.h"
 #include "Loader.h"
 #include "Utility.h"
-
-
-extern boost::log::sources::logger m_log;
-extern boost::log::sources::logger m_log_debug;
-extern boost::log::sources::logger m_log_trace;
+#include "Log.h"
 
 
 Loader::Loader( const boost::program_options::variables_map& vm )
@@ -48,14 +44,14 @@ void Loader::reload()
         return;
     }
 
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "last-writ-time: " << Utility::time_string( m_last_write_time ) << ", new last-write-time: " << Utility::time_string( t );
+    LOG_DEBUG << "last-writ-time: " << Utility::time_string( m_last_write_time ) << ", new last-write-time: " << Utility::time_string( t );
     m_last_write_time = t;
 
     std::ifstream is( m_file_name.c_str() );
 
     if ( !is )
     {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open file: " << m_file_name;
+        LOG << "cannot open file: " << m_file_name;
         return;
     }
 
@@ -80,7 +76,7 @@ void Loader::reload()
 
     if ( m_string_hash_set != string_hash_set )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " 
+        LOG_DEBUG 
             << "old-size = " << m_string_hash_set.size()
             << ", new-size = " << string_hash_set.size()
             << get_difference( m_string_hash_set, m_hash_2_string_map, string_hash_set, hash_2_string_map )
@@ -110,7 +106,7 @@ size_t Loader::string_hash( const std::string& str )
     s.erase( std::remove_if( s.begin(), s.end(), boost::is_any_of( " \t\"\',.?:;!-/#()|<>{}[]~`@$%^&*+\n\t" ) ), s.end() );
     boost::to_lower(s);
     static boost::hash<std::string> string_hasher;
-    BOOST_LOG(m_log_trace) << __FUNCTION__ << " - " << "hash = " << string_hasher(s) << " \t" << s;
+    LOG_TRACE << "" << "hash = " << string_hasher(s) << " \t" << s;
     return string_hasher(s);
 }
 

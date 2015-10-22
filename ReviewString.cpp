@@ -4,16 +4,14 @@
 #include "History.h"
 #include "Speech.h"
 #include "Utility.h"
+#include "Log.h"
 
 
-extern boost::log::sources::logger m_log_debug;
-
-
-ReviewString::ReviewString( size_t hash, Loader* loader, History* history, Speech* speech )
+ReviewString::ReviewString( size_t hash, Loader* loader, History* history, Speech* play )
     : m_hash( hash ),
       m_loader( loader ),
       m_history( history ),
-      m_speech( speech )
+      m_speech( play )
 {
 }
 
@@ -73,9 +71,12 @@ std::string ReviewString::review()
         std::cout << "\t" << s << std::flush;
     }
 
-    speech();
+    if ( m_speech )
+    {
+        play_speech();
+    }
 
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - "
+    LOG_DEBUG
         << s << std::endl
         << "(round: " << m_history->get_review_round( m_hash ) << ") "
         << Utility::get_time_list_string( m_history->get_times( m_hash ) );
@@ -83,7 +84,7 @@ std::string ReviewString::review()
 }
 
 
-void ReviewString::speech()
+void ReviewString::play_speech()
 {
     const std::string& s = m_loader->get_string( m_hash );
     static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );

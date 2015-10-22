@@ -1,11 +1,7 @@
 #include "stdafx.h"
 #include "History.h"
 #include "Utility.h"
-
-
-extern boost::log::sources::logger m_log;
-extern boost::log::sources::logger m_log_debug;
-extern boost::log::sources::logger m_log_trace;
+#include "Log.h"
 
 
 History::History( const boost::program_options::variables_map& vm )
@@ -74,7 +70,8 @@ History::History( const boost::program_options::variables_map& vm )
         strm.clear();
         strm.str("");
         std::copy( string_list.begin(), string_list.end(), std::ostream_iterator<std::string>( strm, ", " ) );
-        BOOST_LOG(m_log_trace) << __FUNCTION__ << " - review-time-span(" << string_list.size() << "): " << strm.str();
+        LOG_TRACE << "review-time-span(" << string_list.size() << "): " << strm.str();
+        LOG_TRACE << "review-time-span(" << string_list.size() << "): " << strm.str();
     }
 }
 
@@ -88,7 +85,7 @@ void History::initialize()
 
     if ( m_history != history )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - wrong history detected.";
+        LOG_DEBUG << "wrong history detected.";
         should_write_history = true;
     }
 
@@ -96,7 +93,7 @@ void History::initialize()
 
     if ( ! review_history.empty() )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - review detected.";
+        LOG_DEBUG << "review detected.";
         merge_history( review_history );
         boost::filesystem::remove( m_review_name );
         should_write_history = true;
@@ -107,7 +104,7 @@ void History::initialize()
         write_history();
     }
 
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - history is updated.\n" << Utility::get_history_string( m_history );
+    LOG_DEBUG << "history is updated.\n" << Utility::get_history_string( m_history );
 }
 
 
@@ -123,11 +120,11 @@ void History::save_history( size_t hash )
 
         if ( ! m_review_stream )
         {
-            BOOST_LOG(m_log) << __FUNCTION__ << " - cannot open for append: " << m_review_name;
+            LOG << "cannot open for append: " << m_review_name;
             return;
         }
 
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "created a file for cache: " << m_review_name;
+        LOG_DEBUG << "created a file for cache: " << m_review_name;
     }
 
 
@@ -135,11 +132,11 @@ void History::save_history( size_t hash )
 
     if ( m_review_stream.fail() )
     {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - failed.";
+        LOG << "failed.";
     }
 
     m_cache_size++;
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "cache-size = " << m_cache_size;
+    LOG_DEBUG << "cache-size = " << m_cache_size;
 
     if ( m_max_cache_size <= m_cache_size )
     {
@@ -155,7 +152,7 @@ void History::write_history()
 
     if ( ! os )
     {
-        BOOST_LOG(m_log) << __FUNCTION__ << " - can not open file for write " << m_file_name;
+        LOG << "can not open file for write " << m_file_name;
         return;
     }
 
@@ -166,7 +163,7 @@ void History::write_history()
         os << std::endl;
     }
 
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "update history, size = " << m_history.size();
+    LOG_DEBUG << "update history, size = " << m_history.size();
 }
 
 
@@ -206,7 +203,7 @@ history_type History::load_history_from_file( const std::string& file_name )
         }
     }
 
-    BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << file_name << std::endl << Utility::get_history_string( history );
+    LOG_DEBUG << file_name << std::endl << Utility::get_history_string( history );
     return history;
 }
 
@@ -231,7 +228,7 @@ void History::merge_history( const history_type& history )
             }
             else
             {
-                BOOST_LOG(m_log_debug) << __FUNCTION__ << " -"
+                LOG_DEBUG
                     << " ignore review time: " << Utility::time_string( times[i] )
                     << " round = " << round
                     << " last-review-time = " << last_time
@@ -252,7 +249,7 @@ void History::synchronize_history( const std::set<size_t>& hashes )
     {
         if ( hashes.find( it->first ) == hashes.end() )
         {
-            BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "erase: " << it->first << " " << Utility::get_time_list_string( it->second );
+            LOG_DEBUG << "erase: " << it->first << " " << Utility::get_time_list_string( it->second );
             m_history.erase( it++ );
             history_changed = true;
         }
@@ -268,7 +265,7 @@ void History::synchronize_history( const std::set<size_t>& hashes )
         {
             m_history.insert( history_type::value_type( *it, time_list() ) );
             history_changed = true;
-            BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "add: " << *it;
+            LOG_DEBUG << "add: " << *it;
         }
     }
 
@@ -292,7 +289,7 @@ bool History::is_expired( size_t hash )
 
     if ( m_review_spans.size() == review_round )
     {
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - finished (" << hash << ")";
+        LOG_DEBUG << "finished (" << hash << ")";
         return false;
     }
 
@@ -329,7 +326,7 @@ void History::clean_review_cache()
     if ( boost::filesystem::exists( m_review_name ) )
     {
         boost::filesystem::remove( m_review_name );
-        BOOST_LOG(m_log_debug) << __FUNCTION__ << " - " << "remove file: " << m_review_name;
+        LOG_DEBUG << "remove file: " << m_review_name;
     }
 
     m_cache_size = 0;
