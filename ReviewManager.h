@@ -15,6 +15,7 @@ public:
 
     ReviewManager( const boost::program_options::variables_map& vm );
     void review();
+    void listen();
 
 public:
 

@@ -71,7 +71,6 @@ History::History( const boost::program_options::variables_map& vm )
         strm.str("");
         std::copy( string_list.begin(), string_list.end(), std::ostream_iterator<std::string>( strm, ", " ) );
         LOG_TRACE << "review-time-span(" << string_list.size() << "): " << strm.str();
-        LOG_TRACE << "review-time-span(" << string_list.size() << "): " << strm.str();
     }
 }
 

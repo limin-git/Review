@@ -293,3 +293,49 @@ std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  
 
     return strm.str();
 }
+
+
+void ReviewManager::listen()
+{
+    m_history->initialize();
+    m_history->synchronize_history( m_loader->get_string_hash_set() );
+
+    const std::set<size_t>& all = m_loader->get_string_hash_set();
+    std::list<size_t> listen_list( all.begin(), all.end() );
+    static Order order(m_loader, m_history);
+    listen_list.sort( order );
+
+    while ( true )
+    {
+        size_t cnt = listen_list.size();
+
+        for ( std::list<size_t>::iterator it = listen_list.begin(); it != listen_list.end(); ++it )
+        {
+            size_t hash = *it;
+            const std::string& s = m_loader->get_string( hash );
+            static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );
+            boost::sregex_iterator it2( s.begin(), s.end(), e );
+            boost::sregex_iterator end;
+            std::vector<std::string> words;
+
+            system( "CLS" );
+            std::cout << s << std::endl;
+
+            for ( ; it2 != end; ++it2 )
+            {
+                std::string word = boost::trim_copy( it2->str(1) );
+                std::cout << word << std::endl;
+                std::vector<std::string> files = m_speech->get_files( word );
+
+                for ( size_t i = 0; i < files.size(); ++i )
+                {
+                    Utility::play_sound( files[i] );
+                }
+            }
+
+            system( ( "TITLE listen mode - " + boost::lexical_cast<std::string>( --cnt ) ).c_str() );
+        }
+
+        wait_for_input();
+    }
+}
