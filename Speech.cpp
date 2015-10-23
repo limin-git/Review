@@ -2,18 +2,27 @@
 #include "Speech.h"
 #include "Utility.h"
 #include "Log.h"
+#include "OptionString.h"
 
 
 Speech::Speech( const boost::program_options::variables_map& vm )
     : m_variables_map( vm )
 {
-    if ( vm.count( "speech-path" ) )
+    if ( vm.count( speech_path_option ) )
     {
-        std::vector<std::string> vs = vm["speech-path"].as< std::vector<std::string> >();
+        std::vector<std::string> vs = vm[speech_path_option].as< std::vector<std::string> >();
 
         for ( size_t i = 0; i < vs.size(); ++i )
         {
-            m_paths.push_back( vs[i] );
+            if ( boost::filesystem::exists( vs[i] ) )
+            {
+                m_paths.push_back( vs[i] );
+                LOG_DEBUG << "speech path: " << vs[i];
+            }
+            else
+            {
+                LOG_DEBUG << "invalide path: " << vs[i];
+            }
         }
     }
 }
@@ -21,68 +30,22 @@ Speech::Speech( const boost::program_options::variables_map& vm )
 
 void Speech::play( const std::string& word )
 {
-    if ( word.empty() )
+    std::vector<std::string> files = get_files( word );
+
+    if ( ! files.empty() )
     {
-        return;
-    }
-
-    std::string first_char = word.substr( 0, 1 );
-
-    for ( size_t i = 0; i < m_paths.size(); ++i )
-    {
-        boost::filesystem::path mp3 = m_paths[i] / first_char / ( word + ".mp3" );
-        boost::filesystem::path wav = m_paths[i] / first_char / ( word + ".wav" );
-
-        if ( boost::filesystem::exists( wav ) )
-        {
-            Utility::play_sound_thread( wav.string() );
-        }
-        else if ( boost::filesystem::exists( mp3 ) )
-        {
-            Utility::play_sound_thread( mp3.string() );
-        }
+        Utility::play_sound_thread( files );
     }
 }
 
 
 void Speech::play( const std::vector<std::string>& words )
 {
-    std::vector<std::string> pahts;
+    std::vector<std::string> files = get_files( words );
 
-    for ( size_t i = 0; i < m_paths.size(); ++i )
+    if ( ! files.empty() )
     {
-        for ( size_t j = 0; j < words.size(); ++j )
-        {
-            if ( words[j].empty() )
-            {
-                continue;
-            }
-
-            std::string first_char = words[j].substr( 0, 1 );
-
-            boost::filesystem::path mp3 = m_paths[i] / first_char / ( words[j] + ".mp3" );
-            boost::filesystem::path wav = m_paths[i] / first_char / ( words[j] + ".wav" );
-
-            if ( boost::filesystem::exists( wav ) )
-            {
-                pahts.push_back( wav.string() );
-                LOG_DEBUG << "play: " << words[j] << " " << wav.string() ;
-            }
-            else if ( boost::filesystem::exists( mp3 ) )
-            {
-                pahts.push_back( mp3.string() );
-                LOG_DEBUG << "play: " << words[j] << " " << mp3.string() ;
-            }
-            else
-            {
-                LOG_DEBUG << "play: " << words[j];
-            }
-        }
-    }
-
-    if ( ! pahts.empty() )
-    {
-        Utility::play_sound_thread( pahts );
+        Utility::play_sound_thread( files );
     }
 }
 
@@ -106,10 +69,12 @@ std::vector<std::string> Speech::get_files( const std::string& word )
         if ( boost::filesystem::exists( wav ) )
         {
             files.push_back( wav.string() );
+            LOG_TRACE << wav.string();
         }
         else if ( boost::filesystem::exists( mp3 ) )
         {
             files.push_back( mp3.string() );
+            LOG_TRACE << mp3.string();
         }
     }
 
@@ -138,10 +103,12 @@ std::vector<std::string> Speech::get_files( const std::vector<std::string>& word
             if ( boost::filesystem::exists( wav ) )
             {
                 files.push_back( wav.string() );
+                LOG_TRACE << wav.string();
             }
             else if ( boost::filesystem::exists( mp3 ) )
             {
                 files.push_back( mp3.string() );
+                LOG_TRACE << mp3.string();
             }
         }
     }

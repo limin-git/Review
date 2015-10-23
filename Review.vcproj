@@ -196,6 +196,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\OptionString.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ReviewManager.h"
 				>
 			</File>
@@ -254,6 +258,10 @@
 		</File>
 		<File
 			RelativePath=".\main.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\review.cfg"
 			>
 		</File>
 		<File

@@ -6,6 +6,7 @@
 #include "ReviewString.h"
 #include "Utility.h"
 #include "Log.h"
+#include "OptionString.h"
 
 
 struct Order
@@ -43,13 +44,21 @@ struct Order
 ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
     : m_variables_map( vm ),
       m_review_mode( forward ),
-      m_backward_index( 0 )
+      m_backward_index( 0 ),
+      m_loader( NULL ),
+      m_history( NULL ),
+      m_speech( NULL ),
+      m_is_listening( false )
 {
-    m_minimal_review_time = vm["minimal-review-time"].as<boost::timer::nanosecond_type>() * 1000 * 1000;
-    m_auto_update_interval = vm["auto-update-interval"].as<size_t>();
+    m_minimal_review_time = vm[review_minimal_time_option].as<boost::timer::nanosecond_type>() * 1000 * 1000;
+    m_auto_update_interval = vm[review_auto_update_interval_option].as<size_t>();
     m_loader = new Loader( vm );
     m_history = new History( vm );
-    m_speech = new Speech( vm );
+
+    if ( ( ! vm.count( speech_disabled_option ) ) || ( vm[speech_disabled_option].as<std::string>() != "true" ) )
+    {
+        m_speech = new Speech( vm );
+    }
 }
 
 
@@ -89,6 +98,14 @@ void ReviewManager::review()
                 {
                     c = wait_for_input();
                 }
+            }
+
+            if ( c == "listen" || c == "l" )
+            {
+                m_is_listening = true;
+                boost::thread( boost::bind( &ReviewManager::listen_thread, this ) );
+                c = wait_for_input();
+                m_is_listening = false;
             }
 
             if ( c == "speak" || c == "play" || c == "s" )
@@ -212,6 +229,7 @@ void ReviewManager::update()
             << ", new-size=" << expired.size() << ""
             << get_new_expired_string( m_reviewing_set, expired )
             ;
+
         m_reviewing_set = expired;
         m_reviewing_list.assign( m_reviewing_set.begin(), m_reviewing_set.end() );
 
@@ -295,47 +313,40 @@ std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  
 }
 
 
-void ReviewManager::listen()
+void ReviewManager::listen_thread()
 {
-    m_history->initialize();
-    m_history->synchronize_history( m_loader->get_string_hash_set() );
+    update();
 
-    const std::set<size_t>& all = m_loader->get_string_hash_set();
-    std::list<size_t> listen_list( all.begin(), all.end() );
-    static Order order(m_loader, m_history);
-    listen_list.sort( order );
+    std::list<size_t> listen_list = m_reviewing_list;
+    size_t cnt = listen_list.size();
 
-    while ( true )
+    for ( std::list<size_t>::iterator it = listen_list.begin(); it != listen_list.end() && m_is_listening; ++it )
     {
-        size_t cnt = listen_list.size();
+        size_t hash = *it;
+        const std::string& s = m_loader->get_string( hash );
+        static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );
+        boost::sregex_iterator it2( s.begin(), s.end(), e );
+        boost::sregex_iterator end;
+        std::vector<std::string> words;
 
-        for ( std::list<size_t>::iterator it = listen_list.begin(); it != listen_list.end(); ++it )
+        for ( ; it2 != end && m_is_listening; ++it2 )
         {
-            size_t hash = *it;
-            const std::string& s = m_loader->get_string( hash );
-            static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );
-            boost::sregex_iterator it2( s.begin(), s.end(), e );
-            boost::sregex_iterator end;
-            std::vector<std::string> words;
-
-            system( "CLS" );
-            std::cout << s << std::endl;
-
-            for ( ; it2 != end; ++it2 )
-            {
-                std::string word = boost::trim_copy( it2->str(1) );
-                std::cout << word << std::endl;
-                std::vector<std::string> files = m_speech->get_files( word );
-
-                for ( size_t i = 0; i < files.size(); ++i )
-                {
-                    Utility::play_sound( files[i] );
-                }
-            }
-
-            system( ( "TITLE listen mode - " + boost::lexical_cast<std::string>( --cnt ) ).c_str() );
+            std::string word = boost::trim_copy( it2->str(1) );
+            words.push_back( word );
         }
 
-        wait_for_input();
+        if ( words.empty() )
+        {
+            continue;
+        }
+
+        system( "CLS" );
+        system( ( "TITLE listen - " + boost::lexical_cast<std::string>( --cnt ) ).c_str() );
+        std::vector<std::string> files = m_speech->get_files( words );
+        std::cout << s << std::endl;
+        std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n" ) );
+        Utility::play_sounds( files );
     }
+
+    set_title();
 }

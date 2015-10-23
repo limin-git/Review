@@ -15,7 +15,7 @@ public:
 
     ReviewManager( const boost::program_options::variables_map& vm );
     void review();
-    void listen();
+    void listen_thread();
 
 public:
 
@@ -37,6 +37,7 @@ public:
 
 public:
 
+    volatile bool m_is_listening;
     boost::mutex m_mutex;
     std::string m_file_name;
     std::string m_history_name;

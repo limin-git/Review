@@ -2,13 +2,14 @@
 #include "Loader.h"
 #include "Utility.h"
 #include "Log.h"
+#include "OptionString.h"
 
 
 Loader::Loader( const boost::program_options::variables_map& vm )
     : m_variables_map( vm ),
       m_last_write_time( 0 )
 {
-    m_file_name = vm["file-name"].as<std::string>();
+    m_file_name = vm[file_name_option].as<std::string>();
 }
 
 
@@ -45,7 +46,6 @@ void Loader::reload()
     }
 
     LOG_DEBUG << "last-writ-time: " << Utility::time_string( m_last_write_time ) << ", new last-write-time: " << Utility::time_string( t );
-    m_last_write_time = t;
 
     std::ifstream is( m_file_name.c_str() );
 
@@ -76,14 +76,18 @@ void Loader::reload()
 
     if ( m_string_hash_set != string_hash_set )
     {
-        LOG_DEBUG 
-            << "old-size = " << m_string_hash_set.size()
-            << ", new-size = " << string_hash_set.size()
-            << get_difference( m_string_hash_set, m_hash_2_string_map, string_hash_set, hash_2_string_map )
-            ;
+        LOG_DEBUG << "old-size = " << m_string_hash_set.size() << ", new-size = " << string_hash_set.size();
+
+        if ( m_last_write_time != 0 )
+        {
+            LOG_DEBUG << get_difference( m_string_hash_set, m_hash_2_string_map, string_hash_set, hash_2_string_map );
+        }
+
         m_string_hash_set = string_hash_set;
         m_hash_2_string_map = hash_2_string_map;
     }
+
+    m_last_write_time = t;
 }
 
 

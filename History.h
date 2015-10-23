@@ -25,7 +25,7 @@ public:
 
 public:
 
-    history_type load_history_from_file( const std::string& file_name );
+    history_type load_history_from_file( const std::string& file );
 
 public:
 

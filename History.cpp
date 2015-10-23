@@ -2,6 +2,7 @@
 #include "History.h"
 #include "Utility.h"
 #include "Log.h"
+#include "OptionString.h"
 
 
 History::History( const boost::program_options::variables_map& vm )
@@ -9,29 +10,29 @@ History::History( const boost::program_options::variables_map& vm )
       m_max_cache_size( 100 ),
       m_cache_size( 0 )
 {
-    std::string name = vm["file-name"].as<std::string>();
+    std::string name = vm[file_name_option].as<std::string>();
 
-    if ( vm.count( "history-file-name" ) )
+    if ( vm.count( file_history_option ) )
     {
-        m_file_name = vm["history-file-name"].as<std::string>();
+        m_file_name = vm[file_history_option].as<std::string>();
     }
     else
     {
         m_file_name  = boost::filesystem::change_extension( name, ".history" ).string();
     }
 
-    if ( vm.count( "review-file-name" ) )
+    if ( vm.count( file_review_option ) )
     {
-        m_review_name = vm["review-file-name"].as<std::string>();
+        m_review_name = vm[file_review_option].as<std::string>();
     }
     else
     {
         m_review_name  = boost::filesystem::change_extension( name, ".review" ).string();
     }
 
-    if ( vm.count( "max-cache-size" ) )
+    if ( vm.count( review_max_cache_size_option ) )
     {
-        m_max_cache_size = vm["max-cache-size"].as<size_t>();
+        m_max_cache_size = vm[review_max_cache_size_option].as<size_t>();
     }
 
     {
@@ -39,9 +40,9 @@ History::History( const boost::program_options::variables_map& vm )
         boost::chrono::seconds s;
         std::vector<std::string> string_list;
 
-        if ( vm.count( "review-time-span-list" ) )
+        if ( vm.count( review_time_span_list_option ) )
         {
-            string_list = vm["review-time-span-list"].as< std::vector<std::string> >();
+            string_list = vm[review_time_span_list_option].as< std::vector<std::string> >();
         }
         else
         {
@@ -103,7 +104,7 @@ void History::initialize()
         write_history();
     }
 
-    LOG_DEBUG << "history is updated.\n" << Utility::get_history_string( m_history );
+    LOG_TRACE << "history is updated.\n" << Utility::get_history_string( m_history );
 }
 
 
@@ -166,16 +167,16 @@ void History::write_history()
 }
 
 
-history_type History::load_history_from_file( const std::string& file_name )
+history_type History::load_history_from_file( const std::string& file )
 {
     history_type history;
 
-    if ( ! boost::filesystem::exists( file_name ) )
+    if ( ! boost::filesystem::exists( file ) )
     {
         return history;
     }
 
-    std::ifstream is( file_name.c_str() );
+    std::ifstream is( file.c_str() );
 
     if ( ! is )
     {
@@ -202,7 +203,7 @@ history_type History::load_history_from_file( const std::string& file_name )
         }
     }
 
-    LOG_DEBUG << file_name << std::endl << Utility::get_history_string( history );
+    LOG_TRACE << file << std::endl << Utility::get_history_string( history );
     return history;
 }
 
