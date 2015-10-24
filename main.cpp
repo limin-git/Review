@@ -21,6 +21,7 @@ int main(int argc, char* argv[])
         ( review_minimal_time_option, boost::program_options::value<boost::timer::nanosecond_type>()->default_value( 500 ),  "in miniseconds" )
         ( review_max_cache_size_option, boost::program_options::value<size_t>()->default_value( 100 ),  "normally write to .review, write to .history every max-cache-size times" )
         ( review_auto_update_interval_option, boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
+        ( speech_play_back, boost::program_options::value<size_t>()->default_value( 0 ),  "listen back" )
         ( speech_disabled_option, boost::program_options::value<std::string>()->default_value("true"), "true or false" )
         ( speech_path_option, boost::program_options::value< std::vector<std::string> >()->multitoken(), "speech path" )
         ;

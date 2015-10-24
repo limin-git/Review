@@ -37,6 +37,7 @@ public:
 
 public:
 
+    size_t m_play_back;
     volatile bool m_is_listening;
     boost::mutex m_mutex;
     std::string m_file_name;

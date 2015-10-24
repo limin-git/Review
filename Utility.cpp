@@ -102,6 +102,22 @@ namespace Utility
     }
 
 
+    std::vector<std::string> extract_words( const std::string& s )
+    {
+        std::vector<std::string> words;
+        static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );
+        boost::sregex_iterator it( s.begin(), s.end(), e );
+        boost::sregex_iterator end;
+
+        for ( ; it != end; ++it )
+        {
+            words.push_back( boost::trim_copy(it->str(1)) );
+        }
+
+        return words;
+    }
+
+
     void play_sound( const std::string& file  )
     {
         try

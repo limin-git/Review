@@ -86,19 +86,25 @@ std::string ReviewString::review()
 
 void ReviewString::play_speech()
 {
-    const std::string& s = m_loader->get_string( m_hash );
-    static const boost::regex e( "(?x)\\{ ( [^{}]+ ) \\}" );
-    boost::sregex_iterator it( s.begin(), s.end(), e );
-    boost::sregex_iterator end;
-    std::vector<std::string> words;
-
-    for ( ; it != end; ++it )
+    if ( m_speech )
     {
-        words.push_back( boost::trim_copy(it->str(1)) );
+        std::vector<std::string> words = Utility::extract_words( m_loader->get_string( m_hash ) );
+
+        if ( ! words.empty() )
+        {
+            m_speech->play( words );
+        }
+    }
+}
+
+
+const std::string& ReviewString::get_string()
+{
+    if ( m_loader )
+    {
+        return m_loader->get_string( m_hash );
     }
 
-    if ( ! words.empty() )
-    {
-        m_speech->play( words );
-    }
+    static std::string empty;
+    return empty;
 }

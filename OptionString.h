@@ -24,3 +24,4 @@
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"
 #define speech_disabled_option                  "speech.disabled"
+#define speech_play_back                        "speech.play-back"

@@ -11,6 +11,7 @@ public:
     ReviewString( size_t hash = 0, Loader* loader = NULL, History* history = NULL, Speech* play = NULL );
     std::string review();
     void play_speech();
+    const std::string& get_string();
 
 public:
 
