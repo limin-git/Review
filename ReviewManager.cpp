@@ -7,6 +7,7 @@
 #include "Utility.h"
 #include "Log.h"
 #include "OptionString.h"
+#include "ConfigFileMonitor.h"
 
 
 struct Order
@@ -48,18 +49,17 @@ ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
       m_loader( NULL ),
       m_history( NULL ),
       m_speech( NULL ),
-      m_is_listening( false )
+      m_speech_impl( NULL ),
+      m_is_listening( false ),
+      m_minimal_review_time( 500 * 1000 * 1000 ),
+      m_auto_update_interval( 60 ),
+      m_play_back( 0 )
 {
-    m_minimal_review_time = vm[review_minimal_time_option].as<boost::timer::nanosecond_type>() * 1000 * 1000;
-    m_auto_update_interval = vm[review_auto_update_interval_option].as<size_t>();
-    m_play_back = vm[speech_play_back].as<size_t>();
     m_loader = new Loader( vm );
     m_history = new History( vm );
-
-    if ( ( ! vm.count( speech_disabled_option ) ) || ( vm[speech_disabled_option].as<std::string>() != "true" ) )
-    {
-        m_speech = new Speech( vm );
-    }
+    m_speech_impl = new Speech( vm );
+    update_option( vm );
+    ConfigFileMonitor::connect_to_signal( boost::bind( &ReviewManager::update_option, this, _1 ) );
 }
 
 
@@ -69,7 +69,7 @@ void ReviewManager::review()
     boost::timer::cpu_timer t;
     ReviewString n;
     ReviewString p;
-    std::vector<ReviewString> backs( m_play_back );
+    std::list<ReviewString> play_back;
 
     m_history->initialize();
     m_history->synchronize_history( m_loader->get_string_hash_set() );
@@ -77,6 +77,8 @@ void ReviewManager::review()
 
     while ( true )
     {
+        ConfigFileMonitor::scan_file();
+
         p = n;
         n = get_next();
 
@@ -108,26 +110,26 @@ void ReviewManager::review()
             if ( c == "listen" || c == "l" )
             {
                 m_is_listening = true;
-                boost::thread( boost::bind( &ReviewManager::listen_thread, this ) );
+                boost::thread t( boost::bind( &ReviewManager::listen_thread, this ) );
                 c = wait_for_input();
                 m_is_listening = false;
             }
 
             if ( m_speech && m_play_back )
             {
-                for ( size_t i = m_play_back; 1 < i; --i )
-                {
-                    backs[i - 1] = backs[i - 2];
-                }
+                play_back.push_back( n );
 
-                backs[0] = n;
+                while ( m_play_back < play_back.size() )
+                {
+                    play_back.pop_front();
+                }
 
                 std::vector<std::string> w;
 
-                for ( size_t i = 0; i < m_play_back; ++i )
+                for ( std::list<ReviewString>::iterator it = play_back.begin(); it != play_back.end(); ++it )
                 {
-                    std::vector<std::string> w2 = Utility::extract_words( backs[i].get_string() );
-                    w.insert( w.begin(), w2.begin(), w2.end() );
+                    std::vector<std::string> w2 = Utility::extract_words( it->get_string() );
+                    w.insert( w.end(), w2.begin(), w2.end() );
                 }
 
                 std::vector<std::string> files = m_speech->get_files( w );
@@ -340,7 +342,7 @@ void ReviewManager::listen_thread()
 
     std::vector<size_t> listen_list( m_reviewing_list.begin(), m_reviewing_list.end() );
 
-    for ( size_t i = 0; i < listen_list.size(); ++i )
+    for ( size_t i = 0; i < listen_list.size() && m_is_listening; ++i )
     {
         size_t hash = listen_list[i];
         const std::string& s = m_loader->get_string( hash );
@@ -349,6 +351,13 @@ void ReviewManager::listen_thread()
         if ( words.empty() )
         {
             continue;
+        }
+
+        ConfigFileMonitor::scan_file();
+
+        if ( m_speech == NULL )
+        {
+            break;
         }
 
         std::vector<std::string> files = m_speech->get_files( words );
@@ -366,4 +375,47 @@ void ReviewManager::listen_thread()
     }
 
     set_title();
+}
+
+
+void ReviewManager::update_option( const boost::program_options::variables_map& vm )
+{
+    boost::timer::nanosecond_type minimal_review_time = vm[review_minimal_time_option].as<boost::timer::nanosecond_type>() * 1000 * 1000;
+    size_t auto_update_interval = vm[review_auto_update_interval_option].as<size_t>();
+    size_t play_back = vm[speech_play_back].as<size_t>();
+
+    if ( m_minimal_review_time != minimal_review_time )
+    {
+        m_minimal_review_time = minimal_review_time;
+        LOG_DEBUG << "m_minimal_review_time = " << m_minimal_review_time;
+    }
+
+    if ( m_auto_update_interval != auto_update_interval )
+    {
+        m_auto_update_interval = auto_update_interval;
+        LOG_DEBUG << "m_auto_update_interval = " << m_auto_update_interval;
+    }
+
+    if ( m_play_back != play_back )
+    {
+        m_play_back = play_back;
+        LOG_DEBUG << "m_play_back = " << m_play_back;
+    }
+
+    if ( ( ! vm.count( speech_disabled_option ) ) || ( vm[speech_disabled_option].as<std::string>() != "true" ) )
+    {
+        if ( m_speech == NULL )
+        {
+            m_speech = m_speech_impl;
+            LOG_DEBUG << "new speech";
+        }
+    }
+    else
+    {
+        if ( m_speech != NULL )
+        {
+            m_speech = NULL;
+            LOG_DEBUG << "delete speech";
+        }
+    }
 }

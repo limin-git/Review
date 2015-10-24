@@ -184,6 +184,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\ConfigFileMonitor.h"
+				>
+			</File>
+			<File
 				RelativePath=".\History.h"
 				>
 			</File>
@@ -244,6 +248,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\ConfigFileMonitor.cpp"
+			>
+		</File>
 		<File
 			RelativePath=".\History.cpp"
 			>

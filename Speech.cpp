@@ -3,28 +3,20 @@
 #include "Utility.h"
 #include "Log.h"
 #include "OptionString.h"
+#include "ConfigFileMonitor.h"
 
 
 Speech::Speech( const boost::program_options::variables_map& vm )
     : m_variables_map( vm )
 {
-    if ( vm.count( speech_path_option ) )
-    {
-        std::vector<std::string> vs = vm[speech_path_option].as< std::vector<std::string> >();
+    update_option( vm );
+    m_connection = ConfigFileMonitor::connect_to_signal( boost::bind( &Speech::update_option, this, _1 ) );
+}
 
-        for ( size_t i = 0; i < vs.size(); ++i )
-        {
-            if ( boost::filesystem::exists( vs[i] ) )
-            {
-                m_paths.push_back( vs[i] );
-                LOG_DEBUG << "speech path: " << vs[i];
-            }
-            else
-            {
-                LOG_DEBUG << "invalide path: " << vs[i];
-            }
-        }
-    }
+
+Speech::~Speech()
+{
+    m_connection.disconnect();
 }
 
 
@@ -114,4 +106,36 @@ std::vector<std::string> Speech::get_files( const std::vector<std::string>& word
     }
 
     return files;
+}
+
+
+void Speech::update_option( const boost::program_options::variables_map& vm )
+{
+    if ( vm.count( speech_path_option ) )
+    {
+        std::vector<std::string> vs = vm[speech_path_option].as< std::vector<std::string> >();
+
+        if ( m_speech_path_option == vs )
+        {
+            return;
+        }
+
+        m_speech_path_option = vs;
+        std::vector<boost::filesystem::path> paths;
+
+        for ( size_t i = 0; i < vs.size(); ++i )
+        {
+            if ( boost::filesystem::exists( vs[i] ) )
+            {
+                paths.push_back( vs[i] );
+                LOG_DEBUG << "speech path: " << vs[i];
+            }
+            else
+            {
+                LOG_DEBUG << "invalide path: " << vs[i];
+            }
+        }
+
+        m_paths = paths;
+    }
 }

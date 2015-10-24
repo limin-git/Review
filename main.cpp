@@ -2,6 +2,7 @@
 #include "Log.h"
 #include "ReviewManager.h"
 #include "OptionString.h"
+#include "ConfigFileMonitor.h"
 #include <objbase.h>
 
 
@@ -39,6 +40,8 @@ int main(int argc, char* argv[])
             store( boost::program_options::parse_config_file<char>( config.c_str(), desc, true ), vm );
             notify( vm );
         }
+
+        ConfigFileMonitor::initialize( config, desc );
     }
 
     if ( vm.count( "help" ) )

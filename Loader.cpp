@@ -38,6 +38,11 @@ const std::string& Loader::get_string( size_t hash )
 
 void Loader::reload()
 {
+    if ( ! boost::filesystem::exists( m_file_name ) )
+    {
+        return;
+    }
+
     std::time_t t = boost::filesystem::last_write_time( m_file_name );
 
     if ( t == m_last_write_time )

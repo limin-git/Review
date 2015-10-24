@@ -25,6 +25,7 @@ public:
     void set_title();
     void update();
     void update_thread();
+    void update_option( const boost::program_options::variables_map& vm );
 
 public:
 
@@ -45,6 +46,7 @@ public:
     Loader* m_loader;
     History* m_history;
     Speech* m_speech;
+    Speech* m_speech_impl;
     std::set<size_t> m_all;
     std::set<size_t> m_reviewing_set;
     std::list<size_t> m_reviewing_list;
