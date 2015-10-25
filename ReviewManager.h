@@ -9,7 +9,7 @@ class ReviewManager
 {
 public:
 
-    enum EReviewDirection{ forward, backward };
+    enum EReviewDirection{ Forward, Backward };
 
 public:
 
@@ -40,6 +40,7 @@ public:
 
     size_t m_play_back;
     volatile bool m_is_listening;
+    boost::condition_variable m_condition;
     boost::mutex m_mutex;
     std::string m_file_name;
     std::string m_history_name;

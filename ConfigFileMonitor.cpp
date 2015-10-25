@@ -19,6 +19,10 @@ void ConfigFileMonitor::initialize( const std::string& file, const boost::progra
     m_last_write_time = 0;
     m_interval = 60;
     // new boost::thread( &ConfigFileMonitor::scan_file_thread );
+
+
+
+
 }
 
 

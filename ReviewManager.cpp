@@ -44,7 +44,7 @@ struct Order
 
 ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
     : m_variables_map( vm ),
-      m_review_mode( forward ),
+      m_review_mode( Forward ),
       m_backward_index( 0 ),
       m_loader( NULL ),
       m_history( NULL ),
@@ -73,6 +73,7 @@ void ReviewManager::review()
 
     m_history->initialize();
     m_history->synchronize_history( m_loader->get_string_hash_set() );
+    update();
     new boost::thread( boost::bind( &ReviewManager::update_thread, this ) );
 
     while ( true )
@@ -149,9 +150,7 @@ ReviewString ReviewManager::get_next()
 
     boost::unique_lock<boost::mutex> lock( m_mutex );
 
-    m_review_mode = forward;
-
-    update();
+    m_review_mode = Forward;
 
     if ( m_reviewing_list.empty() )
     {
@@ -171,6 +170,8 @@ ReviewString ReviewManager::get_next()
         m_history->clean_review_cache();
     }
 
+    m_condition.notify_all();
+
     LOG_TRACE << "end";
     return ReviewString( hash, m_loader, m_history, m_speech );
 }
@@ -185,9 +186,9 @@ ReviewString ReviewManager::get_previous()
         return ReviewString();
     }
 
-    if ( m_review_mode == forward )
+    if ( m_review_mode == Forward )
     {
-        m_review_mode = backward;
+        m_review_mode = Backward;
 
         if ( m_review_history.size() == 1 )
         {
@@ -269,16 +270,16 @@ void ReviewManager::update()
 
 void ReviewManager::update_thread()
 {
-    boost::chrono::seconds wait_for( m_auto_update_interval );
+    boost::chrono::seconds interval( m_auto_update_interval );
 
     while ( true )
     {
-        boost::this_thread::sleep_for( wait_for );
+        boost::unique_lock<boost::mutex> lock( m_mutex );
+        m_condition.wait_for( lock, interval );
 
         {
             LOG_TRACE << "begin";
             LOG_DEBUG << "update thread";
-            boost::unique_lock<boost::mutex> lock( m_mutex );
             update();
             LOG_TRACE << "end";
         }
