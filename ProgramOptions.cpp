@@ -21,9 +21,9 @@ void ProgramOptions::initialize( int argc, char* argv[], const boost::program_op
     store( boost::program_options::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), m_vm );
     notify( m_vm );
 
-    if ( m_vm.count( config_file_option ) )
+    if ( m_vm.count( config_option ) )
     {
-        m_config_file = m_vm[config_file_option].as<std::string>();
+        m_config_file = m_vm[config_option].as<std::string>();
 
         if ( boost::filesystem::exists( m_config_file ) )
         {

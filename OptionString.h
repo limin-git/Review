@@ -7,8 +7,7 @@
 #define log_rotation_size_option                "log.rotation-size"
 #define log_no_console_option                   "log.no-console"
 
-#define config_section                          "config"
-#define config_file_option                      "config.file"
+#define config_option                           "config"
 
 #define file_section                            "file"
 #define file_name_option                        "file.name"
