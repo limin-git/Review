@@ -7,7 +7,7 @@
 #include "Utility.h"
 #include "Log.h"
 #include "OptionString.h"
-#include "ConfigFileMonitor.h"
+#include "ProgramOptions.h"
 
 
 struct Order
@@ -42,9 +42,8 @@ struct Order
 };
 
 
-ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
-    : m_variables_map( vm ),
-      m_review_mode( Forward ),
+ReviewManager::ReviewManager()
+    : m_review_mode( Forward ),
       m_backward_index( 0 ),
       m_loader( NULL ),
       m_history( NULL ),
@@ -55,11 +54,10 @@ ReviewManager::ReviewManager( const boost::program_options::variables_map& vm )
       m_auto_update_interval( 60 ),
       m_play_back( 0 )
 {
-    m_loader = new Loader( vm );
-    m_history = new History( vm );
-    m_speech_impl = new Speech( vm );
-    update_option( vm );
-    ConfigFileMonitor::connect_to_signal( boost::bind( &ReviewManager::update_option, this, _1 ) );
+    m_loader = new Loader;
+    m_history = new History;
+    m_speech_impl = new Speech;
+    ProgramOptions::connect_to_signal( boost::bind( &ReviewManager::update_option, this, _1 ) );
 }
 
 
@@ -78,8 +76,6 @@ void ReviewManager::review()
 
     while ( true )
     {
-        ConfigFileMonitor::scan_file();
-
         p = n;
         n = get_next();
 
@@ -354,8 +350,6 @@ void ReviewManager::listen_thread()
             continue;
         }
 
-        ConfigFileMonitor::scan_file();
-
         if ( m_speech == NULL )
         {
             break;
@@ -408,7 +402,7 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         if ( m_speech == NULL )
         {
             m_speech = m_speech_impl;
-            LOG_DEBUG << "new speech";
+            LOG_DEBUG << "speech enabled";
         }
     }
     else
@@ -416,7 +410,7 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         if ( m_speech != NULL )
         {
             m_speech = NULL;
-            LOG_DEBUG << "delete speech";
+            LOG_DEBUG << "speech disabled";
         }
     }
 }

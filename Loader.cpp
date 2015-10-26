@@ -3,26 +3,29 @@
 #include "Utility.h"
 #include "Log.h"
 #include "OptionString.h"
+#include "DirectoryWatcher.h"
+#include "ProgramOptions.h"
 
 
-Loader::Loader( const boost::program_options::variables_map& vm )
-    : m_variables_map( vm ),
-      m_last_write_time( 0 )
+Loader::Loader()
+    : m_last_write_time( 0 )
 {
-    m_file_name = vm[file_name_option].as<std::string>();
+    m_file_name = ProgramOptions::get_vm()[file_name_option].as<std::string>();
+    DirectoryWatcher::connect_to_signal( boost::bind( &Loader::process_file_change, this), m_file_name );
+    reload();
 }
 
 
 const std::set<size_t>& Loader::get_string_hash_set()
 {
-    reload();
+    boost::unique_lock<boost::mutex> lock( m_mutex );
     return m_string_hash_set;
 }
 
 
 const std::string& Loader::get_string( size_t hash )
 {
-    reload();
+    boost::unique_lock<boost::mutex> lock( m_mutex );
 
     std::map<size_t, std::string>::iterator it = m_hash_2_string_map.find( hash );
 
@@ -38,8 +41,14 @@ const std::string& Loader::get_string( size_t hash )
 
 void Loader::reload()
 {
+    boost::unique_lock<boost::mutex> lock( m_mutex );
+
     if ( ! boost::filesystem::exists( m_file_name ) )
     {
+        LOG << "can not find " << m_file_name;
+        m_string_hash_set.clear();
+        m_hash_2_string_map.clear();
+        m_last_write_time = 0;
         return;
     }
 
@@ -151,4 +160,10 @@ std::string Loader::get_difference( const std::set<size_t>& os, const std::map<s
     }
 
     return strm.str();
+}
+
+
+void Loader::process_file_change()
+{
+    reload();
 }

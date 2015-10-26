@@ -3,20 +3,13 @@
 #include "Utility.h"
 #include "Log.h"
 #include "OptionString.h"
-#include "ConfigFileMonitor.h"
+#include "ProgramOptions.h"
 
 
-Speech::Speech( const boost::program_options::variables_map& vm )
-    : m_variables_map( vm )
+Speech::Speech()
+    : m_no_duplicate( false )
 {
-    update_option( vm );
-    m_connection = ConfigFileMonitor::connect_to_signal( boost::bind( &Speech::update_option, this, _1 ) );
-}
-
-
-Speech::~Speech()
-{
-    m_connection.disconnect();
+    ProgramOptions::connect_to_signal( boost::bind( &Speech::update_option, this, _1 ) );
 }
 
 
@@ -44,14 +37,11 @@ void Speech::play( const std::vector<std::string>& words )
 
 std::vector<std::string> Speech::get_files( const std::string& word )
 {
+    boost::unique_lock<boost::mutex> lock( m_mutex );
+
     std::vector<std::string>  files;
-
-    if ( word.empty() )
-    {
-        files;
-    }
-
     std::string first_char = word.substr( 0, 1 );
+    bool word_found = false;
 
     for ( size_t i = 0; i < m_paths.size(); ++i )
     {
@@ -61,12 +51,19 @@ std::vector<std::string> Speech::get_files( const std::string& word )
         if ( boost::filesystem::exists( wav ) )
         {
             files.push_back( wav.string() );
+            word_found = true;
             LOG_TRACE << wav.string();
         }
         else if ( boost::filesystem::exists( mp3 ) )
         {
             files.push_back( mp3.string() );
+            word_found = true;
             LOG_TRACE << mp3.string();
+        }
+
+        if ( m_no_duplicate && word_found )
+        {
+            break;
         }
     }
 
@@ -76,13 +73,17 @@ std::vector<std::string> Speech::get_files( const std::string& word )
 
 std::vector<std::string> Speech::get_files( const std::vector<std::string>& words )
 {
+    boost::unique_lock<boost::mutex> lock( m_mutex );
+
     std::vector<std::string> files;
+    std::vector<bool> word_found( words.size() );
+    for ( size_t i = 0; i < word_found.size(); ++i ) { word_found[i] = false; }
 
     for ( size_t i = 0; i < m_paths.size(); ++i )
     {
         for ( size_t j = 0; j < words.size(); ++j )
         {
-            if ( words[j].empty() )
+            if ( m_no_duplicate && word_found[j] == true )
             {
                 continue;
             }
@@ -95,11 +96,13 @@ std::vector<std::string> Speech::get_files( const std::vector<std::string>& word
             if ( boost::filesystem::exists( wav ) )
             {
                 files.push_back( wav.string() );
+                word_found[j] = true;
                 LOG_TRACE << wav.string();
             }
             else if ( boost::filesystem::exists( mp3 ) )
             {
                 files.push_back( mp3.string() );
+                word_found[j] = true;
                 LOG_TRACE << mp3.string();
             }
         }
@@ -115,27 +118,37 @@ void Speech::update_option( const boost::program_options::variables_map& vm )
     {
         std::vector<std::string> vs = vm[speech_path_option].as< std::vector<std::string> >();
 
-        if ( m_speech_path_option == vs )
+        if ( m_speech_path_option != vs )
         {
-            return;
+            m_speech_path_option = vs;
+            std::vector<boost::filesystem::path> paths;
+
+            for ( size_t i = 0; i < vs.size(); ++i )
+            {
+                if ( boost::filesystem::exists( vs[i] ) )
+                {
+                    paths.push_back( vs[i] );
+                    LOG_DEBUG << "speech path: " << vs[i];
+                }
+                else
+                {
+                    LOG_DEBUG << "invalide path: " << vs[i];
+                }
+            }
+
+            boost::unique_lock<boost::mutex> lock( m_mutex );
+            m_paths = paths;
         }
+    }
 
-        m_speech_path_option = vs;
-        std::vector<boost::filesystem::path> paths;
+    if ( vm.count( speech_no_duplicate ) )
+    {
+        bool new_value = ( "true" == vm[speech_no_duplicate].as<std::string>() );
 
-        for ( size_t i = 0; i < vs.size(); ++i )
+        if ( m_no_duplicate != new_value )
         {
-            if ( boost::filesystem::exists( vs[i] ) )
-            {
-                paths.push_back( vs[i] );
-                LOG_DEBUG << "speech path: " << vs[i];
-            }
-            else
-            {
-                LOG_DEBUG << "invalide path: " << vs[i];
-            }
+            m_no_duplicate = new_value;
+            LOG_DEBUG << "no-duplicate: " << m_no_duplicate;
         }
-
-        m_paths = paths;
     }
 }

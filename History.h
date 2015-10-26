@@ -7,7 +7,7 @@ class History
 {
 public:
 
-    History( const boost::program_options::variables_map& vm );
+    History();
     void initialize();
     void save_history( size_t hash );
     void synchronize_history( const std::set<size_t>& hashes );
@@ -36,5 +36,4 @@ public:
     size_t m_max_cache_size;
     size_t m_cache_size;
     time_list m_review_spans;
-    boost::program_options::variables_map m_variables_map;
 };

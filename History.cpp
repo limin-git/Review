@@ -3,13 +3,14 @@
 #include "Utility.h"
 #include "Log.h"
 #include "OptionString.h"
+#include "ProgramOptions.h"
 
 
-History::History( const boost::program_options::variables_map& vm )
-    : m_variables_map( vm ),
-      m_max_cache_size( 100 ),
+History::History()
+    : m_max_cache_size( 100 ),
       m_cache_size( 0 )
 {
+    const boost::program_options::variables_map& vm = ProgramOptions::get_vm();
     std::string name = vm[file_name_option].as<std::string>();
 
     if ( vm.count( file_history_option ) )

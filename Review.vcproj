@@ -184,7 +184,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\ConfigFileMonitor.h"
+				RelativePath=".\DirectoryWatcher.h"
 				>
 			</File>
 			<File
@@ -201,6 +201,10 @@
 			</File>
 			<File
 				RelativePath=".\OptionString.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ProgramOptions.h"
 				>
 			</File>
 			<File
@@ -249,7 +253,7 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\ConfigFileMonitor.cpp"
+			RelativePath=".\DirectoryWatcher.cpp"
 			>
 		</File>
 		<File
@@ -266,6 +270,10 @@
 		</File>
 		<File
 			RelativePath=".\main.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\ProgramOptions.cpp"
 			>
 		</File>
 		<File

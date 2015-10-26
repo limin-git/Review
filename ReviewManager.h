@@ -13,7 +13,7 @@ public:
 
 public:
 
-    ReviewManager( const boost::program_options::variables_map& vm );
+    ReviewManager();
     void review();
     void listen_thread();
 
@@ -56,5 +56,4 @@ public:
     std::vector<size_t> m_review_history;
     boost::timer::nanosecond_type m_minimal_review_time;
     size_t m_auto_update_interval;
-    boost::program_options::variables_map m_variables_map;
 };

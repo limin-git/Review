@@ -111,7 +111,12 @@ namespace Utility
 
         for ( ; it != end; ++it )
         {
-            words.push_back( boost::trim_copy(it->str(1)) );
+            std::string w = boost::trim_copy( it->str(1) );
+
+            if ( ! w.empty() )
+            {
+                words.push_back( w );
+            }
         }
 
         return words;
