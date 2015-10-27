@@ -1,4 +1,6 @@
 #pragma once
+typedef std::set<size_t> HashSet;
+typedef std::map<size_t, std::string> HashStringMap;
 
 
 class Loader
@@ -8,11 +10,12 @@ public:
     Loader();
     const std::set<size_t>& get_string_hash_set();
     const std::string& get_string( size_t hash );
+    const std::string& get_string_no_lock( size_t hash ) { return m_hash_2_string_map[hash]; } // should lock ouside
 
 public:
 
     void reload();
-    void process_file_change();
+    void process_file_change(); // DirectoryWatcher slot
 
 public:
 
@@ -20,7 +23,7 @@ public:
 
 public:
 
-    static std::string get_difference( const std::set<size_t>& os, const std::map<size_t, std::string>& om, const std::set<size_t>& ns, const std::map<size_t, std::string>& nm  );
+    static std::string get_difference( const HashSet& os, const HashStringMap& om, const HashSet& ns, const HashStringMap& nm );
 
 public:
 

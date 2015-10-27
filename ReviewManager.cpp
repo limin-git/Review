@@ -27,8 +27,8 @@ struct Order
         }
         else
         {
-            const std::string& ls = loader->get_string( lhs );
-            const std::string& rs = loader->get_string( rhs );
+            const std::string& ls = loader->get_string_no_lock( lhs );
+            const std::string& rs = loader->get_string_no_lock( rhs );
             return
                 ( lr < rr ) ||
                 ( lr == rr && rt < lt ) ||
@@ -52,7 +52,8 @@ ReviewManager::ReviewManager()
       m_is_listening( false ),
       m_minimal_review_time( 500 * 1000 * 1000 ),
       m_auto_update_interval( 60 ),
-      m_play_back( 0 )
+      m_play_back( 0 ),
+      m_current_reviewing( NULL )
 {
     m_loader = new Loader;
     m_history = new History;
@@ -78,6 +79,7 @@ void ReviewManager::review()
     {
         p = n;
         n = get_next();
+        m_current_reviewing = &n;
 
         do
         {
@@ -96,6 +98,7 @@ void ReviewManager::review()
                 system( "CLS" );
 
                 p = get_previous();
+                m_current_reviewing = &p;
                 c = p.review();
 
                 if ( c.empty() )
@@ -133,6 +136,7 @@ void ReviewManager::review()
                 Utility::play_sound_thread( files );
             }
 
+            m_current_reviewing = NULL;
             LOG_TRACE << "end do";
         }
         while ( t.elapsed().wall < m_minimal_review_time );
@@ -253,8 +257,12 @@ void ReviewManager::update()
         m_reviewing_set = expired;
         m_reviewing_list.assign( m_reviewing_set.begin(), m_reviewing_set.end() );
 
-        static Order order(m_loader, m_history);
-        m_reviewing_list.sort( order );
+        {
+            static Order order(m_loader, m_history);
+            boost::unique_lock<boost::mutex> lock( m_loader->m_mutex );
+            m_reviewing_list.sort( order );
+        }
+
         set_title();
         LOG_DEBUG << "sort " << m_reviewing_list.size();
         LOG_TEST<< std::endl << get_hash_list_string( m_reviewing_list );
@@ -335,6 +343,8 @@ std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  
 
 void ReviewManager::listen_thread()
 {
+    // Utility::RecordSound record( "listen.wav" );
+
     update();
 
     std::vector<size_t> listen_list( m_reviewing_list.begin(), m_reviewing_list.end() );
@@ -402,6 +412,7 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         if ( m_speech == NULL )
         {
             m_speech = m_speech_impl;
+            if ( m_current_reviewing != NULL ) { m_current_reviewing->m_speech = m_speech; }
             LOG_DEBUG << "speech enabled";
         }
     }
@@ -410,6 +421,7 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         if ( m_speech != NULL )
         {
             m_speech = NULL;
+            if ( m_current_reviewing != NULL ) { m_current_reviewing->m_speech = NULL; }
             LOG_DEBUG << "speech disabled";
         }
     }

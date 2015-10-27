@@ -20,7 +20,7 @@ public:
 
     void write_history();
     void merge_history( const history_type& history );
-    bool is_expired( size_t hash );
+    bool is_expired( size_t hash, const std::time_t& current_time );
     void clean_review_cache();
 
 public:

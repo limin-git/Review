@@ -16,4 +16,11 @@ namespace Utility
     void play_sounds( const std::vector<std::string>& files );
     void play_sound_thread( const std::string& file );
     void play_sound_thread( const std::vector<std::string>& files );
+
+    struct RecordSound
+    {
+        RecordSound( const std::string& n );
+        ~RecordSound();
+        std::string m_file_name;
+    };
 }

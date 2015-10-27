@@ -13,7 +13,7 @@ public:
 
 public:
 
-    static void process_config_file_change();
+    static void process_config_file_change(); // DirectoryWatcher slot
 
 public:
 

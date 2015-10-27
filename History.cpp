@@ -278,7 +278,7 @@ void History::synchronize_history( const std::set<size_t>& hashes )
 }
 
 
-bool History::is_expired( size_t hash )
+bool History::is_expired( size_t hash, const std::time_t& current_time )
 {
     time_list& times = m_history[hash];
     size_t review_round = times.size();
@@ -294,7 +294,6 @@ bool History::is_expired( size_t hash )
         return false;
     }
 
-    std::time_t current_time = std::time(0);
     std::time_t last_review_time = times.back();
     std::time_t span = m_review_spans[review_round];
     return ( last_review_time + span < current_time );
@@ -304,10 +303,11 @@ bool History::is_expired( size_t hash )
 std::set<size_t> History::get_expired()
 {
     std::set<size_t> expired;
+    std::time_t current_time = std::time(0);
 
     for ( history_type::iterator it = m_history.begin(); it != m_history.end(); ++it )
     {
-        if ( is_expired( it->first ) )
+        if ( is_expired( it->first, current_time ) )
         {
             expired.insert( it->first );
         }

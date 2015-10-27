@@ -129,7 +129,7 @@ size_t Loader::string_hash( const std::string& str )
 }
 
 
-std::string Loader::get_difference( const std::set<size_t>& os, const std::map<size_t, std::string>& om, const std::set<size_t>& ns, const std::map<size_t, std::string>& nm  )
+std::string Loader::get_difference( const HashSet& os, const HashStringMap& om, const HashSet& ns, const HashStringMap& nm )
 {
     std::set<size_t> removed;
     std::set_difference( os.begin(), os.end(), ns.begin(), ns.end(), std::inserter(removed, removed.begin()) );

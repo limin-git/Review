@@ -10,7 +10,7 @@ public:
     void play( const std::vector<std::string>& words );
     std::vector<std::string> get_files( const std::string& word );
     std::vector<std::string> get_files( const std::vector<std::string>& words );
-    void update_option( const boost::program_options::variables_map& vm );
+    void update_option( const boost::program_options::variables_map& vm ); // ProgramOptions slot
 
 public:
 

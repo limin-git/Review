@@ -25,7 +25,7 @@ public:
     void set_title();
     void update();
     void update_thread();
-    void update_option( const boost::program_options::variables_map& vm );
+    void update_option( const boost::program_options::variables_map& vm ); // ProgramOptions slot
 
 public:
 
@@ -56,4 +56,5 @@ public:
     std::vector<size_t> m_review_history;
     boost::timer::nanosecond_type m_minimal_review_time;
     size_t m_auto_update_interval;
+    volatile ReviewString* m_current_reviewing;
 };

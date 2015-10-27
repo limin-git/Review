@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
+        // ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
         ReviewManager rm;
         rm.review();
     }

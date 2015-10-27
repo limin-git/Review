@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "Utility.h"
 #include "Log.h"
-#include <dshow.h>
-#pragma comment(lib, "strmiids.lib") // For IID_IGraphBuilder, IID_IMediaControl, IID_IMediaEvent
 
 
 namespace Utility
@@ -123,38 +121,18 @@ namespace Utility
     }
 
 
-    void play_sound( const std::string& file  )
+    void play_sound( const std::string& file )
     {
-        try
+        char buffer[MAX_PATH] = { 0 };
+        GetShortPathName( file.c_str(), buffer, MAX_PATH );
+        std::string s = "play "+ std::string(buffer) + " wait";
+        LOG_TRACE << "mciSendString " << s;
+
+        MCIERROR code = ::mciSendString( s.c_str(), NULL, 0, NULL );
+
+        if ( 0 != code )
         {
-            IGraphBuilder* graph = NULL;
-            IMediaControl* control = NULL;
-            IMediaEvent*   evnt = NULL;
-
-            ::CoCreateInstance( CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graph );
-            graph->QueryInterface( IID_IMediaControl, (void **)&control );
-            graph->QueryInterface( IID_IMediaEvent, (void **)&evnt );
-
-            HRESULT hr = graph->RenderFile( boost::locale::conv::utf_to_utf<wchar_t>(file).c_str(), NULL );
-
-            if ( SUCCEEDED(hr) )
-            {
-                hr = control->Run();
-
-                if ( SUCCEEDED(hr) )
-                {
-                    long code;
-                    evnt->WaitForCompletion( INFINITE, &code );
-                }
-            }
-
-            evnt->Release();
-            control->Release();
-            graph->Release();
-        }
-        catch ( ... )
-        {
-            LOG << "error " << file;
+            LOG << "error: mciSendString file =" << file << ", error = " << code;
         }
     }
 
@@ -170,6 +148,18 @@ namespace Utility
 
     void play_sound_thread( const std::string& file )
     {
+        char buffer[MAX_PATH] = { 0 };
+        GetShortPathName( file.c_str(), buffer, MAX_PATH );
+        std::string s = "play "+ std::string(buffer) + " wait";
+        LOG_TRACE << "mciSendString " << s;
+
+        MCIERROR code = ::mciSendString( s.c_str(), NULL, 0, NULL );
+
+        if ( 0 != code )
+        {
+            LOG << "error: mciSendString file =" << file << ", error = " << code;
+        }
+
         boost::thread( boost::bind( &play_sound, file ) );
     }
 
@@ -177,6 +167,28 @@ namespace Utility
     void play_sound_thread( const std::vector<std::string>& files )
     {
         boost::thread( boost::bind( &play_sounds, files ) );
+    }
+
+
+    RecordSound::RecordSound( const std::string& n )
+        : m_file_name( n )
+    {
+        ::mciSendString( "set wave samplespersec 11025", "", 0, 0 );
+        ::mciSendString( "set wave channels 2", "", 0, 0 );
+        ::mciSendString( "close my_wav_sound", 0, 0, 0 );
+        ::mciSendString( "open new type WAVEAudio alias my_wav_sound", 0, 0, 0 );
+        ::mciSendString( "record my_wav_sound", 0, 0, 0 );
+        LOG_DEBUG << "recording bein" << m_file_name;
+    }
+
+
+    RecordSound::~RecordSound()
+    {
+        std::string s = "save my_wav_sound " + m_file_name;
+        ::mciSendString( "stop my_wav_sound", 0, 0, 0 );
+        ::mciSendString( s.c_str(), 0, 0, 0 );
+        ::mciSendString( "close my_wav_sound", 0, 0, 0 );
+        LOG_DEBUG << "recording end" << m_file_name;
     }
 
 }
