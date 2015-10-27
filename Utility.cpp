@@ -159,14 +159,49 @@ namespace Utility
         {
             LOG << "error: mciSendString file =" << file << ", error = " << code;
         }
-
-        boost::thread( boost::bind( &play_sound, file ) );
     }
 
 
     void play_sound_thread( const std::vector<std::string>& files )
     {
-        boost::thread( boost::bind( &play_sounds, files ) );
+        struct Player
+        {
+            void add_files( const std::vector<std::string>& files )
+            {
+                boost::unique_lock<boost::mutex> lock( m_mutex );
+                m_files.insert( m_files.end(), files.begin(), files.end() );
+                m_condition.notify_one();
+            }
+
+            void operator()()
+            {
+                while ( true )
+                {
+                    {
+                        boost::unique_lock<boost::mutex> lock( m_mutex );
+
+                        while ( m_files.empty() )
+                        {
+                            m_condition.wait( lock );
+                        }
+
+                        m_playing.swap( m_files );
+                    }
+
+                    play_sounds( m_playing );
+                    m_playing.clear();
+                }
+            }
+
+            boost::mutex m_mutex;
+            boost::condition_variable m_condition;
+            std::vector<std::string> m_files;
+            std::vector<std::string> m_playing;
+        };
+
+        static Player player;
+        static boost::thread t( boost::ref( player ) );
+        player.add_files( files );
     }
 
 
