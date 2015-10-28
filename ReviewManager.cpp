@@ -376,6 +376,7 @@ void ReviewManager::listen_thread()
         system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() - i ) ).c_str() );
         std::cout << s << std::endl;
         std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n" ) );
+        LOG_DEBUG << s;
         Utility::play_sounds( files );
     }
 

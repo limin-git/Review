@@ -45,6 +45,8 @@ void DirectoryWatcher::watch_directory_thread( const std::string& file )
 
         if ( WAIT_OBJECT_0 == status )
         {
+            LOG_TRACE << file;
+
             std::time_t t = boost::filesystem::last_write_time( file );
 
             if ( t != last_write_time )
