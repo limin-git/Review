@@ -19,6 +19,8 @@
 #define review_minimal_time_option              "review.minimal-time"
 #define review_max_cache_size_option            "review.max-cache-size"
 #define review_auto_update_interval_option      "review.auto-update-interval"
+#define review_mix_with_earliest_option         "review.mix-with-earliest"
+#define review_mix_with_random_option           "review.mix-with-random"
 
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"

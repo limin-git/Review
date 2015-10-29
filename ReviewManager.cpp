@@ -58,6 +58,8 @@ ReviewManager::ReviewManager()
     m_loader = new Loader;
     m_history = new History;
     m_speech_impl = new Speech;
+    m_review_orders.insert( Latest );
+    m_review_order_it = m_review_orders.begin();
     ProgramOptions::connect_to_signal( boost::bind( &ReviewManager::update_option, this, _1 ) );
 }
 
@@ -157,8 +159,7 @@ ReviewString ReviewManager::get_next()
         return ReviewString();
     }
 
-    size_t hash = m_reviewing_list.front();
-    m_reviewing_list.pop_front();
+    size_t hash = get_next_hash( m_reviewing_list, get_next_order() );
     m_reviewing_set.erase( hash );
     set_title();
     m_review_history.push_back( hash );
@@ -347,11 +348,12 @@ void ReviewManager::listen_thread()
 
     update();
 
-    std::vector<size_t> listen_list( m_reviewing_list.begin(), m_reviewing_list.end() );
+    std::list<size_t> listen_list = m_reviewing_list;
+    m_review_order_it = m_review_orders.begin();
 
-    for ( size_t i = 0; i < listen_list.size() && m_is_listening; ++i )
+    while ( ! listen_list.empty() )
     {
-        size_t hash = listen_list[i];
+        size_t hash = get_next_hash( listen_list, get_next_order() );
         const std::string& s = m_loader->get_string( hash );
         std::vector<std::string> words = Utility::extract_words( s );
 
@@ -373,12 +375,14 @@ void ReviewManager::listen_thread()
         }
 
         system( "CLS" );
-        system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() - i ) ).c_str() );
+        system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() ) ).c_str() );
         std::cout << s << std::endl;
         std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n" ) );
-        LOG_DEBUG << s;
+        LOG_TRACE << s;
         Utility::play_sounds( files );
     }
+
+    m_review_order_it = m_review_orders.begin();
 
     set_title();
 }
@@ -426,4 +430,95 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
             LOG_DEBUG << "speech disabled";
         }
     }
+
+    if ( vm.count( review_mix_with_earliest_option ) )
+    {
+        if ( vm[review_mix_with_earliest_option].as<std::string>() == "true" )
+        {
+            m_review_orders.insert( Earliest );
+            LOG_DEBUG << "review with earlist";
+        }
+        else
+        {
+            m_review_orders.erase( Earliest );
+            LOG_DEBUG << "review without earlist";
+        }
+
+        m_review_order_it = m_review_orders.begin();
+    }
+
+    if ( vm.count( review_mix_with_random_option ) )
+    {
+        if ( vm[review_mix_with_random_option].as<std::string>() == "true" )
+        {
+            m_review_orders.insert( Random );
+            LOG_DEBUG << "review with random";
+        }
+        else
+        {
+            m_review_orders.erase( Random );
+            LOG_DEBUG << "review without random";
+        }
+
+        m_review_order_it = m_review_orders.begin();
+    }
+}
+
+
+size_t ReviewManager::get_next_hash( std::list<size_t>& hash_list, EReviewOrder order )
+{
+    if ( hash_list.empty() )
+    {
+        return 0;
+    }
+
+    size_t hash = 0;
+
+    if ( order == Latest )
+    {
+        hash = hash_list.front();
+        hash_list.pop_front();
+    }
+    else if ( order == Earliest )
+    {
+        hash = hash_list.back();
+        hash_list.pop_back();
+    }
+    else if ( order == Random )
+    {
+        if ( hash_list.size() < 3 )
+        {
+            hash = hash_list.back();
+            hash_list.pop_back();
+        }
+        else
+        {
+            std::list<size_t>::iterator it = hash_list.begin();
+            std::advance( it, Utility::random_number( 1, hash_list.size() - 2 ) );
+            hash = *it;
+            hash_list.erase( it );
+        }
+    }
+    else
+    {
+        LOG << "error: the review order is unknown: " << order;
+    }
+
+    return hash;
+}
+
+
+ReviewManager::EReviewOrder ReviewManager::get_next_order()
+{
+    if ( m_review_order_it == m_review_orders.end() )
+    {
+        m_review_order_it = m_review_orders.begin();
+    }
+
+    EReviewOrder order = *m_review_order_it;
+    m_review_order_it++;
+
+    static const char* order_str[] = { "Latest", "Earliest", "Random" };
+    LOG_TRACE << "review order: " << order_str[order];
+    return order;
 }

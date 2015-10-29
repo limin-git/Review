@@ -10,6 +10,7 @@ class ReviewManager
 public:
 
     enum EReviewDirection{ Forward, Backward };
+    enum EReviewOrder{ Latest, Earliest, Random };
 
 public:
 
@@ -38,6 +39,11 @@ public:
 
 public:
 
+    size_t get_next_hash( std::list<size_t>& hash_list, EReviewOrder order );
+    EReviewOrder get_next_order();
+
+public:
+
     size_t m_play_back;
     volatile bool m_is_listening;
     boost::condition_variable m_condition;
@@ -57,4 +63,6 @@ public:
     boost::timer::nanosecond_type m_minimal_review_time;
     size_t m_auto_update_interval;
     volatile ReviewString* m_current_reviewing;
+    std::set<EReviewOrder> m_review_orders;
+    std::set<EReviewOrder>::iterator m_review_order_it;
 };

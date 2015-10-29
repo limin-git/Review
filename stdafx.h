@@ -16,6 +16,7 @@
 #include <windows.h>
 #include <MMSystem.h>
 #pragma  comment( lib, "winmm.lib" )
+#include <limits>
 #include <iostream>
 #include <string>
 #include <vector>

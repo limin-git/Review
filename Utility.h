@@ -1,4 +1,10 @@
 #pragma once
+#ifdef max
+#undef max
+#undef min
+#endif
+
+
 typedef std::vector<std::time_t> time_list;
 typedef std::map<size_t, time_list> history_type;
 
@@ -23,4 +29,6 @@ namespace Utility
         ~RecordSound();
         std::string m_file_name;
     };
+
+    size_t random_number( size_t lo = std::numeric_limits <size_t>::min(), size_t hi = std::numeric_limits <size_t>::max() );
 }
