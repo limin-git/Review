@@ -53,13 +53,13 @@ ReviewManager::ReviewManager()
       m_minimal_review_time( 500 * 1000 * 1000 ),
       m_auto_update_interval( 60 ),
       m_play_back( 0 ),
-      m_current_reviewing( NULL )
+      m_current_reviewing( NULL ),
+      m_listen_no_string( false ),
+      m_listen_all( false )
 {
     m_loader = new Loader;
     m_history = new History;
     m_speech_impl = new Speech;
-    m_review_orders.insert( Latest );
-    m_review_order_it = m_review_orders.begin();
     ProgramOptions::connect_to_signal( boost::bind( &ReviewManager::update_option, this, _1 ) );
 }
 
@@ -159,7 +159,7 @@ ReviewString ReviewManager::get_next()
         return ReviewString();
     }
 
-    size_t hash = get_next_hash( m_reviewing_list, get_next_order() );
+    size_t hash = get_next_hash( m_reviewing_list, get_next_order( m_review_orders, m_review_order_it ) );
     m_reviewing_set.erase( hash );
     set_title();
     m_review_history.push_back( hash );
@@ -348,12 +348,23 @@ void ReviewManager::listen_thread()
 
     update();
 
-    std::list<size_t> listen_list = m_reviewing_list;
-    m_review_order_it = m_review_orders.begin();
+    std::list<size_t> listen_list;
 
-    while ( ! listen_list.empty() )
+    if ( m_listen_all )
     {
-        size_t hash = get_next_hash( listen_list, get_next_order() );
+        listen_list.assign( m_all.begin(), m_all.end() );
+    }
+    else
+    {
+        listen_list = m_reviewing_list;
+    }
+
+    std::vector<EReviewOrder> listen_orders = m_review_orders;
+    std::vector<EReviewOrder>::iterator listen_orders_it = listen_orders.begin();
+
+    while ( m_is_listening && ! listen_list.empty() )
+    {
+        size_t hash = get_next_hash( listen_list, get_next_order( listen_orders, listen_orders_it ) );
         const std::string& s = m_loader->get_string( hash );
         std::vector<std::string> words = Utility::extract_words( s );
 
@@ -376,13 +387,17 @@ void ReviewManager::listen_thread()
 
         system( "CLS" );
         system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() ) ).c_str() );
-        std::cout << s << std::endl;
-        std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n" ) );
+
+        if ( ! m_listen_no_string )
+        {
+            std::cout << "\t" << s << std::endl;
+        }
+
+        std::cout << "\t";
+        std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n\t" ) );
         LOG_TRACE << s;
         Utility::play_sounds( files );
     }
-
-    m_review_order_it = m_review_orders.begin();
 
     set_title();
 }
@@ -393,6 +408,7 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
     boost::timer::nanosecond_type minimal_review_time = vm[review_minimal_time_option].as<boost::timer::nanosecond_type>() * 1000 * 1000;
     size_t auto_update_interval = vm[review_auto_update_interval_option].as<size_t>();
     size_t play_back = vm[speech_play_back].as<size_t>();
+    std::vector<EReviewOrder> review_orders = convert_from_string( vm[review_order_option].as<std::string>() );
 
     if ( m_minimal_review_time != minimal_review_time )
     {
@@ -431,36 +447,34 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         }
     }
 
-    if ( vm.count( review_mix_with_earliest_option ) )
+    if ( vm.count( listen_no_string_option ) && vm[listen_no_string_option].as<std::string>() == "true" )
     {
-        if ( vm[review_mix_with_earliest_option].as<std::string>() == "true" )
-        {
-            m_review_orders.insert( Earliest );
-            LOG_DEBUG << "review with earlist";
-        }
-        else
-        {
-            m_review_orders.erase( Earliest );
-            LOG_DEBUG << "review without earlist";
-        }
-
-        m_review_order_it = m_review_orders.begin();
+        m_listen_no_string = true;
+        LOG_DEBUG << "listen without string";
+    }
+    else
+    {
+        m_listen_no_string = false;
+        LOG_DEBUG << "listen with string";
     }
 
-    if ( vm.count( review_mix_with_random_option ) )
+    if ( vm.count( listen_all_option ) && vm[listen_all_option].as<std::string>() == "true" )
     {
-        if ( vm[review_mix_with_random_option].as<std::string>() == "true" )
-        {
-            m_review_orders.insert( Random );
-            LOG_DEBUG << "review with random";
-        }
-        else
-        {
-            m_review_orders.erase( Random );
-            LOG_DEBUG << "review without random";
-        }
+        m_listen_all = true;
+        LOG_DEBUG << "listen all = true";
+    }
+    else
+    {
+        m_listen_all = false;
+        LOG_DEBUG << "listen all = false";
+    }
 
+    if ( review_orders != m_review_orders )
+    {
+        boost::unique_lock<boost::mutex> lock( m_mutex );
+        m_review_orders = review_orders;
         m_review_order_it = m_review_orders.begin();
+        LOG_DEBUG << "review order: " << vm[review_order_option].as<std::string>();
     }
 }
 
@@ -508,17 +522,40 @@ size_t ReviewManager::get_next_hash( std::list<size_t>& hash_list, EReviewOrder 
 }
 
 
-ReviewManager::EReviewOrder ReviewManager::get_next_order()
+ReviewManager::EReviewOrder ReviewManager::get_next_order( std::vector<EReviewOrder>& orders, std::vector<EReviewOrder>::iterator& it )
 {
-    if ( m_review_order_it == m_review_orders.end() )
+    if ( it == orders.end() )
     {
-        m_review_order_it = m_review_orders.begin();
+        it = orders.begin();
     }
 
-    EReviewOrder order = *m_review_order_it;
-    m_review_order_it++;
+    if ( it == orders.end() )
+    {
+        return Invalide;
+    }
+
+    EReviewOrder order = *it;
+    it++;
 
     static const char* order_str[] = { "Latest", "Earliest", "Random" };
     LOG_TRACE << "review order: " << order_str[order];
     return order;
+}
+
+
+std::vector<ReviewManager::EReviewOrder> ReviewManager::convert_from_string( const std::string& order_string )
+{
+    std::vector<ReviewManager::EReviewOrder> orders;
+    std::vector<std::string> vos;
+    boost::split( vos, order_string, boost::is_any_of( ",:;-/\\%@|" ) );
+
+    for ( size_t i = 0; i < vos.size(); ++i )
+    {
+        boost::to_lower(vos[i]);
+        if ( vos[i] == "latest" ) { orders.push_back( Latest ); }
+        else if ( vos[i] == "earlist" ) { orders.push_back( Earliest ); }
+        else if ( vos[i] == "random" ) { orders.push_back( Random ); }
+    }
+
+    return orders;
 }

@@ -19,11 +19,14 @@
 #define review_minimal_time_option              "review.minimal-time"
 #define review_max_cache_size_option            "review.max-cache-size"
 #define review_auto_update_interval_option      "review.auto-update-interval"
-#define review_mix_with_earliest_option         "review.mix-with-earliest"
-#define review_mix_with_random_option           "review.mix-with-random"
+#define review_order_option                     "review.order"
 
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"
 #define speech_disabled_option                  "speech.disabled"
 #define speech_play_back                        "speech.play-back"
 #define speech_no_duplicate                     "speech.no-duplicate"
+
+#define listen_section                          "listen"
+#define listen_no_string_option                 "listen.no-string"
+#define listen_all_option                       "listen.all"

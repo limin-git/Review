@@ -48,23 +48,29 @@ void ProgramOptions::process_config_file_change()
 {
     boost::unique_lock<boost::mutex> lock( m_mutex );
 
-    if ( ! boost::filesystem::exists( m_config_file ) )
+    try
     {
-        return;
+        std::time_t t = boost::filesystem::last_write_time( m_config_file );
+
+        if ( t == m_last_write_time )
+        {
+            return;
+        }
+
+        LOG_DEBUG << m_config_file;
+
+        m_vm.clear();
+        store( boost::program_options::parse_config_file<char>( m_config_file.c_str(), *m_desc, true ), m_vm );
+        notify( m_vm );
+        m_signal( m_vm );
+        m_last_write_time = t;
     }
-
-    std::time_t t = boost::filesystem::last_write_time( m_config_file );
-
-    if ( t == m_last_write_time )
+    catch ( boost::filesystem::filesystem_error& e)
     {
-        return;
+        LOG << e.what();
     }
-
-    LOG_DEBUG << m_config_file;
-
-    m_vm.clear();
-    store( boost::program_options::parse_config_file<char>( m_config_file.c_str(), *m_desc, true ), m_vm );
-    notify( m_vm );
-    m_signal( m_vm );
-    m_last_write_time = t;
+    catch ( std::exception& e)
+    {
+        LOG << e.what();
+    }
 }
