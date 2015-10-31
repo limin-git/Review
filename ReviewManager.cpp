@@ -8,6 +8,7 @@
 #include "Log.h"
 #include "OptionString.h"
 #include "ProgramOptions.h"
+#include "OptionUpdateHelper.h"
 
 
 struct Order
@@ -410,76 +411,63 @@ void ReviewManager::listen_thread()
 
 void ReviewManager::update_option( const boost::program_options::variables_map& vm )
 {
-    boost::timer::nanosecond_type minimal_review_time = vm[review_minimal_time_option].as<boost::timer::nanosecond_type>() * 1000 * 1000;
-    size_t auto_update_interval = vm[review_auto_update_interval_option].as<size_t>();
-    size_t play_back = vm[speech_play_back].as<size_t>();
-    std::vector<EReviewOrder> review_orders = convert_from_string( vm[review_order_option].as<std::string>() );
+    static OptionUpdateHelper option_helper;
 
-    if ( m_minimal_review_time != minimal_review_time )
+    if ( option_helper.update_one_option<boost::timer::nanosecond_type>( review_minimal_time_option, vm, 500 ) )
     {
-        m_minimal_review_time = minimal_review_time;
-        LOG_DEBUG << "m_minimal_review_time = " << m_minimal_review_time;
+        m_minimal_review_time = option_helper.get_value<boost::timer::nanosecond_type>( review_minimal_time_option ) * 1000 * 1000;
+        LOG_DEBUG << "review-minimal-review-time: " << m_minimal_review_time;
     }
 
-    if ( m_auto_update_interval != auto_update_interval )
+    if ( option_helper.update_one_option<size_t>( review_auto_update_interval_option, vm, 60 ) )
     {
-        m_auto_update_interval = auto_update_interval;
-        LOG_DEBUG << "m_auto_update_interval = " << m_auto_update_interval;
+        m_auto_update_interval = option_helper.get_value<size_t>( review_auto_update_interval_option );
+        LOG_DEBUG << "review-auto-update-interval: " << m_auto_update_interval;
     }
 
-    if ( m_play_back != play_back )
+    if ( option_helper.update_one_option<size_t>( speech_play_back, vm, 0 ) )
     {
-        m_play_back = play_back;
-        LOG_DEBUG << "m_play_back = " << m_play_back;
+        m_play_back = option_helper.get_value<size_t>( speech_play_back );
+        LOG_DEBUG << "speech-play-back: " << m_play_back;
     }
 
-    if ( ( ! vm.count( speech_disabled_option ) ) || ( vm[speech_disabled_option].as<std::string>() != "true" ) )
+    if ( option_helper.update_one_option<std::string>( review_order_option, vm, "latest" ) )
     {
-        if ( m_speech == NULL )
-        {
-            m_speech = m_speech_impl;
-            if ( m_current_reviewing != NULL ) { m_current_reviewing->m_speech = m_speech; }
-            LOG_DEBUG << "speech enabled";
-        }
+        boost::unique_lock<boost::mutex> lock( m_mutex );
+        std::string order_option_str = option_helper.get_value<std::string>( review_order_option );
+        m_review_orders = convert_from_string( order_option_str );
+        m_review_order_it = m_review_orders.begin();
+        LOG_DEBUG << "review-order: " << order_option_str;
     }
-    else
+
+    if ( option_helper.update_one_option<std::string>( speech_disabled_option, vm, "false" ) )
     {
-        if ( m_speech != NULL )
+        bool speech_disabled = ( "true" == option_helper.get_value<std::string>( speech_disabled_option ) );
+
+        if ( speech_disabled )
         {
             m_speech = NULL;
             if ( m_current_reviewing != NULL ) { m_current_reviewing->m_speech = NULL; }
-            LOG_DEBUG << "speech disabled";
+            LOG_DEBUG << "speech-disabled: true";
+        }
+        else
+        {
+            m_speech = m_speech_impl;
+            if ( m_current_reviewing != NULL ) { m_current_reviewing->m_speech = m_speech; }
+            LOG_DEBUG << "speech-disabled: false";
         }
     }
 
-    if ( vm.count( listen_no_string_option ) && vm[listen_no_string_option].as<std::string>() == "true" )
+    if ( option_helper.update_one_option<std::string>( listen_no_string_option, vm, "false" ) )
     {
-        m_listen_no_string = true;
-        LOG_DEBUG << "listen without string";
-    }
-    else
-    {
-        m_listen_no_string = false;
-        LOG_DEBUG << "listen with string";
+        m_listen_no_string = ( "true" == option_helper.get_value<std::string>( listen_no_string_option ) );
+        LOG_DEBUG << "listen-no-string: " << ( m_listen_no_string ? "true" : "false" );
     }
 
-    if ( vm.count( listen_all_option ) && vm[listen_all_option].as<std::string>() == "true" )
+    if ( option_helper.update_one_option<std::string>( listen_all_option, vm, "false" ) )
     {
-        m_listen_all = true;
-        LOG_DEBUG << "listen all = true";
-    }
-    else
-    {
-        m_listen_all = false;
-        LOG_DEBUG << "listen all = false";
-    }
-
-    if ( review_orders != m_review_orders )
-    {
-        boost::unique_lock<boost::mutex> lock( m_mutex );
-        m_review_orders = review_orders;
-        m_review_order_it = m_review_orders.begin();
-        LOG_DEBUG << "review order: " << vm[review_order_option].as<std::string>();
+        m_listen_all = ( "true" == option_helper.get_value<std::string>( listen_all_option ) );
+        LOG_DEBUG << "listen-all: " << ( m_listen_all ? "true" : "false" );
     }
 }
 

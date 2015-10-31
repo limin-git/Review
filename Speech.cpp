@@ -4,6 +4,7 @@
 #include "Log.h"
 #include "OptionString.h"
 #include "ProgramOptions.h"
+#include "OptionUpdateHelper.h"
 
 
 Speech::Speech()
@@ -129,71 +130,45 @@ std::vector<std::string> Speech::get_files( const std::vector<std::string>& word
 
 void Speech::update_option( const boost::program_options::variables_map& vm )
 {
-    if ( vm.count( speech_path_option ) )
+    static OptionUpdateHelper option_helper;
+
+    if ( option_helper.update_one_option< std::vector<std::string> >( speech_path_option, vm ) )
     {
-        std::vector<std::string> vs = vm[speech_path_option].as< std::vector<std::string> >();
+        std::vector<std::string> vs = option_helper.get_value< std::vector<std::string> >( speech_path_option );
+        std::vector<boost::filesystem::path> paths;
 
-        if ( m_speech_path_option != vs )
+        for ( size_t i = 0; i < vs.size(); ++i )
         {
-            m_speech_path_option = vs;
-            std::vector<boost::filesystem::path> paths;
-
-            for ( size_t i = 0; i < vs.size(); ++i )
+            if ( boost::filesystem::exists( vs[i] ) )
             {
-                if ( boost::filesystem::exists( vs[i] ) )
-                {
-                    paths.push_back( vs[i] );
-                    LOG_DEBUG << "speech path: " << vs[i];
-                }
-                else
-                {
-                    LOG_DEBUG << "invalide path: " << vs[i];
-                }
+                paths.push_back( vs[i] );
+                LOG_DEBUG << "speech path: " << vs[i];
             }
-
-            boost::unique_lock<boost::mutex> lock( m_mutex );
-            m_paths = paths;
+            else
+            {
+                LOG_DEBUG << "invalide path: " << vs[i];
+            }
         }
+
+        boost::unique_lock<boost::mutex> lock( m_mutex );
+        m_paths = paths;
     }
 
-    if ( vm.count( speech_no_duplicate ) )
+    if ( option_helper.update_one_option<std::string>( speech_no_duplicate, vm, "false" ) )
     {
-        bool new_value = ( "true" == vm[speech_no_duplicate].as<std::string>() );
-
-        if ( m_no_duplicate != new_value )
-        {
-            m_no_duplicate = new_value;
-            LOG_DEBUG << "no-duplicate: " << m_no_duplicate;
-        }
+        m_no_duplicate = ( "true" == option_helper.get_value<std::string>( speech_no_duplicate ) );
+        LOG_DEBUG << "no-duplicate: " << m_no_duplicate;
     }
 
-    if ( vm.count( speech_no_text_to_speech ) )
+    if ( option_helper.update_one_option<std::string>( speech_no_text_to_speech, vm, "false" ) )
     {
-        bool new_value = ( "true" == vm[speech_no_text_to_speech].as<std::string>() );
-
-        if ( m_no_text_to_speech != new_value )
-        {
-            m_no_text_to_speech = new_value;
-            LOG_DEBUG << "no-text-to-speech: " << m_no_text_to_speech;
-        }
+        m_no_text_to_speech = ( "true" == option_helper.get_value<std::string>( speech_no_text_to_speech ) );
+        LOG_DEBUG << "no-text-to-speech: " << m_no_text_to_speech;
     }
 
-    if ( vm.count( speech_text_to_speech_repeat ) )
+    if ( option_helper.update_one_option<size_t>( speech_text_to_speech_repeat, vm, 1 ) )
     {
-        size_t new_value = vm[speech_text_to_speech_repeat].as<size_t>();
-
-        if ( m_text_to_speech_repeat != new_value )
-        {
-            m_text_to_speech_repeat = new_value;
-            LOG_DEBUG << "text-to-speech-repeat: " << m_text_to_speech_repeat;
-        }
-    }
-    else
-    {
-        if ( m_text_to_speech_repeat != 1 )
-        {
-            m_text_to_speech_repeat = 1;
-            LOG_DEBUG << "text-to-speech-repeat: " << m_text_to_speech_repeat;
-        }
+        m_text_to_speech_repeat = option_helper.get_value<size_t>( speech_text_to_speech_repeat );
+        LOG_DEBUG << "text-to-speech-repeat: " << m_text_to_speech_repeat;
     }
 }

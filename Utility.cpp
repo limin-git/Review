@@ -1,9 +1,7 @@
 #include "stdafx.h"
 #include "Utility.h"
 #include "Log.h"
-#include <atlbase.h>
-#include <atlcom.h>
-#include <sapi.h>
+#include "QueueProcessor.h"
 
 
 namespace Utility
@@ -167,44 +165,8 @@ namespace Utility
 
     void play_sound_thread( const std::vector<std::string>& files )
     {
-        struct Player
-        {
-            void add_files( const std::vector<std::string>& files )
-            {
-                boost::unique_lock<boost::mutex> lock( m_mutex );
-                m_files.insert( m_files.end(), files.begin(), files.end() );
-                m_condition.notify_one();
-            }
-
-            void operator()()
-            {
-                while ( true )
-                {
-                    {
-                        boost::unique_lock<boost::mutex> lock( m_mutex );
-
-                        while ( m_files.empty() )
-                        {
-                            m_condition.wait( lock );
-                        }
-
-                        m_speaking.swap( m_files );
-                    }
-
-                    play_sounds( m_speaking );
-                    m_speaking.clear();
-                }
-            }
-
-            boost::mutex m_mutex;
-            boost::condition_variable m_condition;
-            std::vector<std::string> m_files;
-            std::vector<std::string> m_speaking;
-        };
-
-        static Player player;
-        static boost::thread t( boost::ref( player ) );
-        player.add_files( files );
+        static QueueProcessor<> player( ( boost::function<void (const std::vector<std::string>&)>( &play_sounds ) ) );
+        player.queue_items( files );
     }
 
 
@@ -233,48 +195,8 @@ namespace Utility
 
     void text_to_speech_thread( const std::vector<std::string>& words )
     {
-        struct Player
-        {
-            void add_words( const std::vector<std::string>& words )
-            {
-                boost::unique_lock<boost::mutex> lock( m_mutex );
-                m_words.insert( m_words.end(), words.begin(), words.end() );
-                m_condition.notify_one();
-            }
-
-            void operator()()
-            {
-                while ( true )
-                {
-                    {
-                        boost::unique_lock<boost::mutex> lock( m_mutex );
-
-                        while ( m_words.empty() )
-                        {
-                            m_condition.wait( lock );
-                        }
-
-                        m_speaking.swap( m_words );
-                    }
-                    
-                    text_to_speech( m_speaking );
-                    m_speaking.clear();
-                }
-            }
-
-            boost::mutex m_mutex;
-            boost::condition_variable m_condition;
-            std::vector<std::string> m_words;
-            std::vector<std::string> m_speaking;
-        };
-
-        static Player player;
-        static boost::thread t( boost::ref( player ) );
-
-        if ( ! words.empty() )
-        {
-            player.add_words( words );
-        }
+        static QueueProcessor<> speaker( ( boost::function<void (const std::vector<std::string>&)>( &text_to_speech ) ) );
+        speaker.queue_items( words );
     }
 
 

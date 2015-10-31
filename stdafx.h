@@ -16,6 +16,9 @@
 #include <windows.h>
 #include <MMSystem.h>
 #pragma  comment( lib, "winmm.lib" )
+#include <atlbase.h>
+#include <atlcom.h>
+#include <sapi.h>
 #include <limits>
 #include <iostream>
 #include <string>

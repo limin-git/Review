@@ -14,9 +14,8 @@ public:
 public:
 
     boost::mutex m_mutex;
-    bool m_no_duplicate;
-    bool m_no_text_to_speech;
-    size_t m_text_to_speech_repeat;
+    volatile bool m_no_duplicate;
+    volatile bool m_no_text_to_speech;
+    volatile size_t m_text_to_speech_repeat;
     std::vector<boost::filesystem::path> m_paths;
-    std::vector<std::string> m_speech_path_option;
 };

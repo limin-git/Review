@@ -204,7 +204,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\OptionUpdateHelper.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ProgramOptions.h"
+				>
+			</File>
+			<File
+				RelativePath=".\QueueProcessor.h"
 				>
 			</File>
 			<File
