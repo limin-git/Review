@@ -26,6 +26,8 @@
 #define speech_disabled_option                  "speech.disabled"
 #define speech_play_back                        "speech.play-back"
 #define speech_no_duplicate                     "speech.no-duplicate"
+#define speech_no_text_to_speech                "speech.no-text-to-speech"
+#define speech_text_to_speech_repeat            "speech.text-to-speech-repeat"
 
 #define listen_section                          "listen"
 #define listen_no_string_option                 "listen.no-string"

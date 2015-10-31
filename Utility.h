@@ -22,6 +22,8 @@ namespace Utility
     void play_sounds( const std::vector<std::string>& files );
     void play_sound_thread( const std::string& file );
     void play_sound_thread( const std::vector<std::string>& files );
+    void text_to_speech( const std::vector<std::string>& words );
+    void text_to_speech_thread( const std::vector<std::string>& words );
 
     struct RecordSound
     {

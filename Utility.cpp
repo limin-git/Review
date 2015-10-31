@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "Utility.h"
 #include "Log.h"
+#include <atlbase.h>
+#include <atlcom.h>
+#include <sapi.h>
 
 
 namespace Utility
@@ -185,23 +188,93 @@ namespace Utility
                             m_condition.wait( lock );
                         }
 
-                        m_playing.swap( m_files );
+                        m_speaking.swap( m_files );
                     }
 
-                    play_sounds( m_playing );
-                    m_playing.clear();
+                    play_sounds( m_speaking );
+                    m_speaking.clear();
                 }
             }
 
             boost::mutex m_mutex;
             boost::condition_variable m_condition;
             std::vector<std::string> m_files;
-            std::vector<std::string> m_playing;
+            std::vector<std::string> m_speaking;
         };
 
         static Player player;
         static boost::thread t( boost::ref( player ) );
         player.add_files( files );
+    }
+
+
+    void text_to_speech( const std::vector<std::string>& words )
+    {
+        static ISpVoice* sp_voice = NULL;
+
+        if ( NULL == sp_voice )
+        {
+            ::CoCreateInstance( CLSID_SpVoice, NULL, CLSCTX_ALL, IID_ISpVoice, (void **)&sp_voice );
+        }
+
+        for ( size_t i = 0; i < words.size(); ++i )
+        {
+            std::wstring ws = boost::locale::conv::utf_to_utf<wchar_t>( words[i] );
+            sp_voice->Speak( ws.c_str(), 0, NULL );
+            LOG_TRACE << words[i];
+
+            if ( i + 1 < words.size() )
+            {
+                boost::this_thread::sleep_for( boost::chrono::milliseconds(300) );
+            }
+        }
+    }
+
+
+    void text_to_speech_thread( const std::vector<std::string>& words )
+    {
+        struct Player
+        {
+            void add_words( const std::vector<std::string>& words )
+            {
+                boost::unique_lock<boost::mutex> lock( m_mutex );
+                m_words.insert( m_words.end(), words.begin(), words.end() );
+                m_condition.notify_one();
+            }
+
+            void operator()()
+            {
+                while ( true )
+                {
+                    {
+                        boost::unique_lock<boost::mutex> lock( m_mutex );
+
+                        while ( m_words.empty() )
+                        {
+                            m_condition.wait( lock );
+                        }
+
+                        m_speaking.swap( m_words );
+                    }
+                    
+                    text_to_speech( m_speaking );
+                    m_speaking.clear();
+                }
+            }
+
+            boost::mutex m_mutex;
+            boost::condition_variable m_condition;
+            std::vector<std::string> m_words;
+            std::vector<std::string> m_speaking;
+        };
+
+        static Player player;
+        static boost::thread t( boost::ref( player ) );
+
+        if ( ! words.empty() )
+        {
+            player.add_words( words );
+        }
     }
 
 

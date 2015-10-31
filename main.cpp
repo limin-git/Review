@@ -26,6 +26,8 @@ int main(int argc, char* argv[])
         ( speech_disabled_option, boost::program_options::value<std::string>()->default_value("true"), "true|false" )
         ( speech_path_option, boost::program_options::value< std::vector<std::string> >()->multitoken(), "speech path" )
         ( speech_no_duplicate, boost::program_options::value<std::string>()->default_value( "false" ), "no duplicate (true|false)" )
+        ( speech_no_text_to_speech, boost::program_options::value<std::string>()->default_value( "false" ), "no TTS(text-to-speech) (true|false)" )
+        ( speech_text_to_speech_repeat, boost::program_options::value<size_t>()->default_value( 1 ), "TTS repeat number [n]" )
         ( listen_no_string_option, boost::program_options::value<std::string>()->default_value( "false" ), "no original string (true|false)" )
         ( listen_all_option, boost::program_options::value<std::string>()->default_value( "false" ), "listen all? (true|false)" )
         ;
@@ -61,7 +63,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        // ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
+        ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
         ReviewManager rm;
         rm.review();
     }

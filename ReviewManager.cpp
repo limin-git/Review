@@ -134,8 +134,10 @@ void ReviewManager::review()
                     w.insert( w.end(), w2.begin(), w2.end() );
                 }
 
-                std::vector<std::string> files = m_speech->get_files( w );
+                std::vector<std::string> speak_words;
+                std::vector<std::string> files = m_speech->get_files( w, speak_words );
                 Utility::play_sound_thread( files );
+                Utility::text_to_speech_thread( speak_words );
             }
 
             m_current_reviewing = NULL;
@@ -221,6 +223,7 @@ std::string ReviewManager::wait_for_input( const std::string& message )
     std::getline( std::cin, input );
     system( "CLS" );
     boost::trim(input);
+    input.erase( std::remove_if( input.begin(), input.end(), boost::is_any_of("\\[]+-") ), input.end() );
     return input;
 }
 
@@ -378,12 +381,13 @@ void ReviewManager::listen_thread()
             break;
         }
 
-        std::vector<std::string> files = m_speech->get_files( words );
+        std::vector<std::string> speak_words;
+        std::vector<std::string> files = m_speech->get_files( words, speak_words );
 
-        if ( files.empty() )
-        {
-            continue;
-        }
+        //if ( files.empty() )
+        //{
+        //    continue;
+        //}
 
         system( "CLS" );
         system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() ) ).c_str() );
@@ -397,6 +401,7 @@ void ReviewManager::listen_thread()
         std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n\t" ) );
         LOG_TRACE << s;
         Utility::play_sounds( files );
+        Utility::text_to_speech( speak_words );
     }
 
     set_title();

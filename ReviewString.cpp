@@ -54,6 +54,7 @@ std::string ReviewString::review()
 
             std::string command;
             std::getline( std::cin, command );
+            command.erase( std::remove_if( command.begin(), command.end(), boost::is_any_of("\\[]+-") ), command.end() );
             if ( ! command.empty() )
             {
                 return command;
@@ -74,6 +75,7 @@ std::string ReviewString::review()
     if ( m_speech )
     {
         play_speech();
+        m_speech = NULL; // only once
     }
 
     LOG_DEBUG

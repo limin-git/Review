@@ -7,26 +7,33 @@
 
 
 Speech::Speech()
-    : m_no_duplicate( false )
+    : m_no_duplicate( false ),
+      m_no_text_to_speech( false ),
+      m_text_to_speech_repeat( 1 )
 {
     ProgramOptions::connect_to_signal( boost::bind( &Speech::update_option, this, _1 ) );
 }
 
 
-void Speech::play( const std::string& word )
-{
-    std::vector<std::string> files = get_files( word );
-
-    if ( ! files.empty() )
-    {
-        Utility::play_sound_thread( files );
-    }
-}
-
-
 void Speech::play( const std::vector<std::string>& words )
 {
-    std::vector<std::string> files = get_files( words );
+    std::vector<std::string> speak_words;
+    std::vector<std::string> files = get_files( words, speak_words );
+
+    if ( ! m_no_text_to_speech && ! speak_words.empty()  )
+    {
+        for ( size_t i = 0; i < m_text_to_speech_repeat; ++i )
+        {
+            if ( files.empty() )
+            {
+                Utility::text_to_speech_thread( speak_words );
+            }
+            else
+            {
+                Utility::text_to_speech( speak_words );
+            }
+        }
+    }
 
     if ( ! files.empty() )
     {
@@ -71,7 +78,7 @@ std::vector<std::string> Speech::get_files( const std::string& word )
 }
 
 
-std::vector<std::string> Speech::get_files( const std::vector<std::string>& words )
+std::vector<std::string> Speech::get_files( const std::vector<std::string>& words, std::vector<std::string>& speak_words )
 {
     boost::unique_lock<boost::mutex> lock( m_mutex );
 
@@ -105,6 +112,14 @@ std::vector<std::string> Speech::get_files( const std::vector<std::string>& word
                 word_found[j] = true;
                 LOG_TRACE << mp3.string();
             }
+        }
+    }
+
+    for ( size_t i = 0; i < word_found.size(); ++i )
+    {
+        if ( ! word_found[i] )
+        {
+            speak_words.push_back( words[i] );
         }
     }
 
@@ -149,6 +164,36 @@ void Speech::update_option( const boost::program_options::variables_map& vm )
         {
             m_no_duplicate = new_value;
             LOG_DEBUG << "no-duplicate: " << m_no_duplicate;
+        }
+    }
+
+    if ( vm.count( speech_no_text_to_speech ) )
+    {
+        bool new_value = ( "true" == vm[speech_no_text_to_speech].as<std::string>() );
+
+        if ( m_no_text_to_speech != new_value )
+        {
+            m_no_text_to_speech = new_value;
+            LOG_DEBUG << "no-text-to-speech: " << m_no_text_to_speech;
+        }
+    }
+
+    if ( vm.count( speech_text_to_speech_repeat ) )
+    {
+        size_t new_value = vm[speech_text_to_speech_repeat].as<size_t>();
+
+        if ( m_text_to_speech_repeat != new_value )
+        {
+            m_text_to_speech_repeat = new_value;
+            LOG_DEBUG << "text-to-speech-repeat: " << m_text_to_speech_repeat;
+        }
+    }
+    else
+    {
+        if ( m_text_to_speech_repeat != 1 )
+        {
+            m_text_to_speech_repeat = 1;
+            LOG_DEBUG << "text-to-speech-repeat: " << m_text_to_speech_repeat;
         }
     }
 }
