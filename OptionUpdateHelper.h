@@ -21,7 +21,6 @@ public:
                 if ( new_value != old_value )
                 {
                      m_variables[option_name] = new_value;
-                    // LOG_DEBUG << option_name << ": " << new_value;
                     return true;
                 }
             }
@@ -30,7 +29,6 @@ public:
                 if ( old_value != default_value )
                 {
                      m_variables[option_name] = default_value;
-                    // LOG_DEBUG << option_name << ": " << default_value;
                     return true;
                 }
             }

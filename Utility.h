@@ -19,11 +19,14 @@ namespace Utility
     std::ostream& output_history( std::ostream& os, const history_type& history );
     std::vector<std::string> extract_words( const std::string& s );
     void play_sound( const std::string& file );
-    void play_sounds( const std::vector<std::string>& files );
-    void play_sound_thread( const std::string& file );
-    void play_sound_thread( const std::vector<std::string>& files );
-    void text_to_speech( const std::vector<std::string>& words );
-    void text_to_speech_thread( const std::vector<std::string>& words );
+    void play_sound_list( const std::vector<std::string>& files );
+    void play_sound_list_thread( const std::vector<std::string>& files );
+    void text_to_speech( const std::string& word );
+    void text_to_speech_list( const std::vector<std::string>& words );
+    void text_to_speech_list_thread( const std::vector<std::string>& words );
+    void play_or_tts( const std::pair<std::string, std::string>& word_path );
+    void play_or_tts_list( const std::vector< std::pair<std::string, std::string> >& word_path_list );
+    void play_or_tts_list_thread( const std::vector< std::pair<std::string, std::string> >& word_path_list );
 
     struct RecordSound
     {

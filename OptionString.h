@@ -20,6 +20,7 @@
 #define review_max_cache_size_option            "review.max-cache-size"
 #define review_auto_update_interval_option      "review.auto-update-interval"
 #define review_order_option                     "review.order"
+#define review_answer_first                     "review.answer-first"
 
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"
@@ -27,7 +28,6 @@
 #define speech_play_back                        "speech.play-back"
 #define speech_no_duplicate                     "speech.no-duplicate"
 #define speech_no_text_to_speech                "speech.no-text-to-speech"
-#define speech_text_to_speech_repeat            "speech.text-to-speech-repeat"
 
 #define listen_section                          "listen"
 #define listen_no_string_option                 "listen.no-string"

@@ -9,7 +9,7 @@ public:
 
     History();
     void initialize();
-    void save_history( size_t hash );
+    void save_history( size_t hash, std::time_t current_time );
     void synchronize_history( const std::set<size_t>& hashes );
     std::set<size_t> get_expired();
     size_t get_review_round( size_t hash ) { return m_history[hash].size(); }

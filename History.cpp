@@ -109,9 +109,12 @@ void History::initialize()
 }
 
 
-void History::save_history( size_t hash )
+void History::save_history( size_t hash, std::time_t current_time )
 {
-    std::time_t current_time = std::time(0);
+    if ( current_time == 0 )
+    {
+        m_history[hash].clear();
+    }
 
     m_history[hash].push_back( current_time );
 
@@ -127,7 +130,6 @@ void History::save_history( size_t hash )
 
         LOG_DEBUG << "created a file for cache: " << m_review_name;
     }
-
 
     m_review_stream << hash << "\t" << current_time << std::endl;
 
@@ -219,8 +221,20 @@ void History::merge_history( const history_type& history )
         size_t round = history_times.size();
         std::time_t last_time = ( round ? history_times.back() : 0 );
 
+        if ( last_time == 0 && round == 1 )
+        {
+            continue;
+        }
+
         for ( size_t i = 0; i < times.size(); ++i )
         {
+            if ( times[i] == 0 )
+            {
+                history_times.clear();
+                history_times.push_back( 0 );
+                continue;
+            }
+
             if ( last_time + m_review_spans[round] < times[i] )
             {
                 history_times.push_back( times[i] );
@@ -290,11 +304,18 @@ bool History::is_expired( size_t hash, const std::time_t& current_time )
 
     if ( m_review_spans.size() == review_round )
     {
-        LOG_DEBUG << "finished (" << hash << ")";
+        LOG_TEST << "finished (" << hash << ")";
         return false;
     }
 
     std::time_t last_review_time = times.back();
+
+    if ( last_review_time == 0 )
+    {
+        LOG_TEST << "deleted (" << hash << ")";
+        return false;
+    }
+
     std::time_t span = m_review_spans[review_round];
     return ( last_review_time + span < current_time );
 }

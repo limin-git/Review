@@ -7,11 +7,12 @@
 #include "Log.h"
 
 
-ReviewString::ReviewString( size_t hash, Loader* loader, History* history, Speech* play )
+ReviewString::ReviewString( size_t hash, Loader* loader, History* history, Speech* play, bool answer_first )
     : m_hash( hash ),
       m_loader( loader ),
       m_history( history ),
-      m_speech( play )
+      m_speech( play ),
+      m_answer_first( answer_first )
 {
 }
 
@@ -43,6 +44,8 @@ std::string ReviewString::review()
             }
         }
 
+        // TODO: add example colum
+
         std::string q = s.substr( 4, pos - 4 );
         std::string a = s.substr( pos + 4 );
         boost::trim(q);
@@ -50,17 +53,32 @@ std::string ReviewString::review()
 
         if ( !q.empty() && ! a.empty() )
         {
-            std::cout << "\t" << q << std::flush;
+            if ( m_answer_first )
+            {
+                std::cout << "\t" << a << std::flush;
+            }
+            else
+            {
+                std::cout << "\t" << q << std::flush;
+            }
 
             std::string command;
             std::getline( std::cin, command );
             command.erase( std::remove_if( command.begin(), command.end(), boost::is_any_of("\\[]+-") ), command.end() );
             if ( ! command.empty() )
             {
+                system( "CLS" );
                 return command;
             }
 
-            std::cout << "\t" << a << std::flush;
+            if ( m_answer_first )
+            {
+                std::cout << "\t" << q << std::flush;
+            }
+            else
+            {
+                std::cout << "\t" << a << std::flush;
+            }
         }
         else
         {

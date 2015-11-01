@@ -47,6 +47,7 @@ public:
 
     size_t m_play_back;
     volatile bool m_is_listening;
+    volatile bool m_answer_first;
     boost::condition_variable m_condition;
     boost::mutex m_mutex;
     std::string m_file_name;

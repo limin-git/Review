@@ -125,7 +125,7 @@ namespace Utility
     void play_sound( const std::string& file )
     {
         char buffer[MAX_PATH] = { 0 };
-        GetShortPathName( file.c_str(), buffer, MAX_PATH );
+        ::GetShortPathName( file.c_str(), buffer, MAX_PATH );
         std::string s = "play "+ std::string(buffer) + " wait";
         LOG_TRACE << "mciSendString " << s;
 
@@ -138,7 +138,7 @@ namespace Utility
     }
 
 
-    void play_sounds( const std::vector<std::string>& files )
+    void play_sound_list( const std::vector<std::string>& files )
     {
         for ( size_t i = 0; i < files.size(); ++i )
         {
@@ -147,30 +147,22 @@ namespace Utility
     }
 
 
-    void play_sound_thread( const std::string& file )
+    void play_sound_list_thread( const std::vector<std::string>& files )
     {
-        char buffer[MAX_PATH] = { 0 };
-        GetShortPathName( file.c_str(), buffer, MAX_PATH );
-        std::string s = "play "+ std::string(buffer) + " wait";
-        LOG_TRACE << "mciSendString " << s;
-
-        MCIERROR code = ::mciSendString( s.c_str(), NULL, 0, NULL );
-
-        if ( 0 != code )
-        {
-            LOG << "error: mciSendString file =" << file << ", error = " << code;
-        }
-    }
-
-
-    void play_sound_thread( const std::vector<std::string>& files )
-    {
-        static QueueProcessor<> player( ( boost::function<void (const std::vector<std::string>&)>( &play_sounds ) ) );
+        static QueueProcessor<> player( ( boost::function<void (const std::vector<std::string>&)>( &play_sound_list ) ) );
         player.queue_items( files );
     }
 
 
-    void text_to_speech( const std::vector<std::string>& words )
+    void text_to_speech( const std::string& word )
+    {
+        std::vector<std::string> words;
+        words.push_back( word );
+        text_to_speech_list( words );
+    }
+
+
+    void text_to_speech_list( const std::vector<std::string>& words )
     {
         static ISpVoice* sp_voice = NULL;
 
@@ -193,10 +185,38 @@ namespace Utility
     }
 
 
-    void text_to_speech_thread( const std::vector<std::string>& words )
+    void text_to_speech_list_thread( const std::vector<std::string>& words )
     {
-        static QueueProcessor<> speaker( ( boost::function<void (const std::vector<std::string>&)>( &text_to_speech ) ) );
+        static QueueProcessor<> speaker( ( boost::function<void (const std::vector<std::string>&)>( &text_to_speech_list ) ) );
         speaker.queue_items( words );
+    }
+
+
+    void play_or_tts( const std::pair<std::string, std::string>& word_path )
+    {
+        if ( ! word_path.second.empty() )
+        {
+            play_sound( word_path.second );
+        }
+        else
+        {
+            text_to_speech( word_path.first );
+        }
+    }
+
+
+    void play_or_tts_list( const std::vector< std::pair<std::string, std::string> >& word_path_list )
+    {
+        for ( size_t i = 0; i < word_path_list.size(); ++i )
+        {
+            play_or_tts( word_path_list[i] );
+        }
+    }
+
+    void play_or_tts_list_thread( const std::vector< std::pair<std::string, std::string> >& word_path_list )
+    {
+        static QueueProcessor< std::pair<std::string, std::string> > play_tts( ( boost::function<void (const std::vector< std::pair<std::string, std::string> >&)>( &play_or_tts_list ) ) );
+        play_tts.queue_items( word_path_list );
     }
 
 
@@ -228,17 +248,16 @@ namespace Utility
         static boost::random::uniform_int_distribution<> dist;
         size_t x = dist( gen );
 
-        if ( lo == std::numeric_limits <size_t> ::min() && hi == std::numeric_limits <size_t> ::max() )
+        if ( lo != std::numeric_limits <size_t> ::min() || hi != std::numeric_limits <size_t> ::max() )
         {
-            return x;
+            while ( x < lo || hi < x )
+            {
+                x %= hi;
+                x += lo;
+            }
         }
 
-        while ( x < lo || hi < x )
-        {
-            x %= hi;
-            x += lo;
-        }
-
+        LOG_TRACE << x << "(low = " << lo << ", high = " << hi << ")";
         return x;
     }
 

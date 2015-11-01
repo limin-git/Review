@@ -56,7 +56,8 @@ ReviewManager::ReviewManager()
       m_play_back( 0 ),
       m_current_reviewing( NULL ),
       m_listen_no_string( false ),
-      m_listen_all( false )
+      m_listen_all( false ),
+      m_answer_first( false )
 {
     m_loader = new Loader;
     m_history = new History;
@@ -118,6 +119,11 @@ void ReviewManager::review()
                 m_is_listening = false;
             }
 
+            if ( c == "delete" || c == "d" )
+            {
+                m_history->save_history( n.get_hash(), 0 );
+            }
+
             if ( m_speech && m_play_back )
             {
                 play_back.push_back( n );
@@ -135,10 +141,8 @@ void ReviewManager::review()
                     w.insert( w.end(), w2.begin(), w2.end() );
                 }
 
-                std::vector<std::string> speak_words;
-                std::vector<std::string> files = m_speech->get_files( w, speak_words );
-                Utility::play_sound_thread( files );
-                Utility::text_to_speech_thread( speak_words );
+                std::vector< std::pair<std::string, std::string> > word_paths = m_speech->get_word_speech_file_path( w );
+                Utility::play_or_tts_list_thread( word_paths );
             }
 
             m_current_reviewing = NULL;
@@ -159,14 +163,19 @@ ReviewString ReviewManager::get_next()
 
     if ( m_reviewing_list.empty() )
     {
-        return ReviewString();
+        update();
+
+        if ( m_reviewing_list.empty() )
+        {
+            return ReviewString();
+        }
     }
 
     size_t hash = get_next_hash( m_reviewing_list, get_next_order( m_review_orders, m_review_order_it ) );
     m_reviewing_set.erase( hash );
     set_title();
     m_review_history.push_back( hash );
-    m_history->save_history( hash );
+    m_history->save_history( hash, std::time(0) );
 
     if ( m_reviewing_set.empty() )
     {
@@ -177,7 +186,7 @@ ReviewString ReviewManager::get_next()
     m_condition.notify_all();
 
     LOG_TRACE << "end";
-    return ReviewString( hash, m_loader, m_history, m_speech );
+    return ReviewString( hash, m_loader, m_history, m_speech, m_answer_first );
 }
 
 
@@ -209,7 +218,7 @@ ReviewString ReviewManager::get_previous()
         m_backward_index--;
     }
 
-    return ReviewString( m_review_history[m_backward_index], m_loader, m_history, m_speech );
+    return ReviewString( m_review_history[m_backward_index], m_loader, m_history, m_speech, m_answer_first );
 }
 
 
@@ -232,7 +241,7 @@ std::string ReviewManager::wait_for_input( const std::string& message )
 void ReviewManager::set_title()
 {
     std::stringstream strm;
-    strm << "TITLE " << m_reviewing_set.size();
+    strm << "TITLE " << m_file_name << " - " << m_reviewing_set.size();
     system( strm.str().c_str() );
 }
 
@@ -253,11 +262,21 @@ void ReviewManager::update()
 
     if ( m_reviewing_set != expired )
     {
-        LOG_DEBUG
-            << "old-size=" << m_reviewing_list.size()
-            << ", new-size=" << expired.size() << ""
-            << get_new_expired_string( m_reviewing_set, expired )
-            ;
+        if ( ! m_reviewing_set.empty() )
+        {
+            LOG_DEBUG
+                << "old-size=" << m_reviewing_list.size()
+                << ", new-size=" << expired.size() << ""
+                << get_new_expired_string( m_reviewing_set, expired )
+                ;
+        }
+        else
+        {
+            LOG_DEBUG
+                << "old-size=" << m_reviewing_list.size()
+                << ", new-size=" << expired.size() << ""
+                ;
+        }
 
         m_reviewing_set = expired;
         m_reviewing_list.assign( m_reviewing_set.begin(), m_reviewing_set.end() );
@@ -348,8 +367,6 @@ std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  
 
 void ReviewManager::listen_thread()
 {
-    // Utility::RecordSound record( "listen.wav" );
-
     update();
 
     std::list<size_t> listen_list;
@@ -382,13 +399,12 @@ void ReviewManager::listen_thread()
             break;
         }
 
-        std::vector<std::string> speak_words;
-        std::vector<std::string> files = m_speech->get_files( words, speak_words );
+        std::vector< std::pair<std::string, std::string> > word_paths = m_speech->get_word_speech_file_path( words );
 
-        //if ( files.empty() )
-        //{
-        //    continue;
-        //}
+        if ( word_paths.empty() )
+        {
+            continue;
+        }
 
         system( "CLS" );
         system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() ) ).c_str() );
@@ -401,8 +417,7 @@ void ReviewManager::listen_thread()
         std::cout << "\t";
         std::copy( words.begin(), words.end(), std::ostream_iterator<std::string>( std::cout, "\n\t" ) );
         LOG_TRACE << s;
-        Utility::play_sounds( files );
-        Utility::text_to_speech( speak_words );
+        Utility::play_or_tts_list( word_paths );
     }
 
     set_title();
@@ -468,6 +483,18 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
     {
         m_listen_all = ( "true" == option_helper.get_value<std::string>( listen_all_option ) );
         LOG_DEBUG << "listen-all: " << ( m_listen_all ? "true" : "false" );
+    }
+
+    if ( option_helper.update_one_option<std::string>( review_answer_first, vm, "false" ) )
+    {
+        m_answer_first = ( "true" == option_helper.get_value<std::string>( review_answer_first ) );
+        LOG_DEBUG << "review-answer-first: " << m_answer_first;
+    }
+
+    if ( option_helper.update_one_option<std::string>( file_name_option, vm ) )
+    {
+        m_file_name = option_helper.get_value<std::string>( file_name_option );
+        LOG_DEBUG << "file-name: " << m_file_name;
     }
 }
 
