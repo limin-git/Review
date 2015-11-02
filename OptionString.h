@@ -21,6 +21,7 @@
 #define review_auto_update_interval_option      "review.auto-update-interval"
 #define review_order_option                     "review.order"
 #define review_answer_first                     "review.answer-first"
+#define review_display_format                   "review.display-format"
 
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"
@@ -32,3 +33,6 @@
 #define listen_section                          "listen"
 #define listen_no_string_option                 "listen.no-string"
 #define listen_all_option                       "listen.all"
+
+#define upgrade_section                         "upgrade"
+#define upgrade_hash_algorithm_option           "upgrade.hash-algorithm"

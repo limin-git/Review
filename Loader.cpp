@@ -7,8 +7,9 @@
 #include "ProgramOptions.h"
 
 
-Loader::Loader()
-    : m_last_write_time( 0 )
+Loader::Loader( boost::function<size_t (const std::string&)> hash_function )
+    : m_last_write_time( 0 ),
+      m_hash_function( hash_function )
 {
     m_file_name = ProgramOptions::get_vm()[file_name_option].as<std::string>();
     DirectoryWatcher::connect_to_signal( boost::bind( &Loader::process_file_change, this), m_file_name );
@@ -83,7 +84,7 @@ void Loader::reload()
             continue;
         }
 
-        size_t hash = string_hash( s );
+        size_t hash = m_hash_function( s );
         string_hash_set.insert( hash );
         hash_2_string_map[hash] = s;
     }
@@ -108,12 +109,16 @@ void Loader::reload()
 size_t Loader::string_hash( const std::string& str )
 {
     std::string s = str;
+
+    static boost::regex e( "(?x)\\[ [a-zA-Z0-9]+ \\]" );
+    s = boost::regex_replace( s, e, "" );
+
     const char* chinese_chars[] =
     {
         "¡¡", "£¬", "¡£", "¡¢", "£¿", "£¡", "£»", "£º", "¡¤", "£®", "¡°", "¡±", "¡®", "¡¯",
         "£à", "£­", "£½", "¡«", "£À", "££", "£¤", "£¥", "£ª", "£ß", "£«", "£ü", "¡ª", "¡ª¡ª",  "¡­", "¡­¡­",
         "¡¶", "¡·", "£¨", "£¨", "¡¾", "¡¿", "¡¸", "¡¹", "¡º", "¡»", "¡¼", "¡½", "¡´", "¡µ", "£û", "£ý",
-        "\\n", "\\t", "\\nt"
+        "\\n", "\\t"
     };
 
     for ( size_t i = 0; i < sizeof(chinese_chars) / sizeof(char*); ++i )
@@ -121,11 +126,12 @@ size_t Loader::string_hash( const std::string& str )
         boost::erase_all( s, chinese_chars[i] );
     }
 
-    s.erase( std::remove_if( s.begin(), s.end(), boost::is_any_of( " \t\"\',.?:;!-/#()|<>{}[]~`@$%^&*+\n\t" ) ), s.end() );
+    s.erase( std::remove_if( s.begin(), s.end(), boost::is_any_of( " \"\',.?:;!-/#()|<>{}[]~`@$%^&*+\n\t" ) ), s.end() );
     boost::to_lower(s);
     static boost::hash<std::string> string_hasher;
-    LOG_TRACE << "" << "hash = " << string_hasher(s) << " \t" << s;
-    return string_hasher(s);
+    size_t hash = string_hasher(s);
+    LOG_TRACE << "" << "hash = " << hash << " \t" << s;
+    return hash;
 }
 
 

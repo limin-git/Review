@@ -186,7 +186,7 @@ ReviewString ReviewManager::get_next()
     m_condition.notify_all();
 
     LOG_TRACE << "end";
-    return ReviewString( hash, m_loader, m_history, m_speech, m_answer_first );
+    return ReviewString( hash, m_loader, m_history, m_speech, m_display_format );
 }
 
 
@@ -218,7 +218,7 @@ ReviewString ReviewManager::get_previous()
         m_backward_index--;
     }
 
-    return ReviewString( m_review_history[m_backward_index], m_loader, m_history, m_speech, m_answer_first );
+    return ReviewString( m_review_history[m_backward_index], m_loader, m_history, m_speech, m_display_format );
 }
 
 
@@ -496,6 +496,12 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         m_file_name = option_helper.get_value<std::string>( file_name_option );
         LOG_DEBUG << "file-name: " << m_file_name;
     }
+
+    if ( option_helper.update_one_option<std::string>( review_display_format, vm, "Q,AE" ) )
+    {
+        m_display_format = option_helper.get_value<std::string>( review_display_format );
+        LOG_DEBUG << "review-display-format: " << m_display_format;
+    }    
 }
 
 
@@ -578,4 +584,44 @@ std::vector<ReviewManager::EReviewOrder> ReviewManager::convert_from_string( con
     }
 
     return orders;
+}
+
+
+void ReviewManager::upgrade_hash_algorithm()
+{
+    std::cout << "upgrading hash algorithm for " << m_loader->m_file_name << " ..." << std::flush;
+
+    m_history->initialize();
+
+    history_type& old_history = m_history->m_history;
+    boost::function<size_t (const std::string&)> new_hash_fun = &Loader::string_hash_new;
+    const std::set<size_t>& hash_set = m_loader->get_string_hash_set();
+    history_type new_history;
+
+    for ( std::set<size_t>::const_iterator it = hash_set.begin(); it != hash_set.end(); ++it )
+    {
+        size_t hash = *it;
+        const std::string& s = m_loader->get_string_no_lock( hash );
+
+        history_type::iterator find_it = old_history.find( hash );
+
+        if ( find_it == old_history.end() )
+        {
+            std::cout << "\naborted: not match (updated already?)" << std::endl;
+            return;
+        }
+
+        size_t new_hash = new_hash_fun( s );
+        new_history[new_hash] = find_it->second;
+    }
+
+    if ( old_history == new_history )
+    {
+        std::cout << "\nthe algorithm is same, do nothing." << std::endl;
+        return;
+    }
+
+    m_history->m_history = new_history;
+    m_history->write_history();
+    std::cout << "\ndone." << std::endl;
 }

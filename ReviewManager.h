@@ -45,6 +45,10 @@ public:
 
 public:
 
+    void upgrade_hash_algorithm();
+
+public:
+
     size_t m_play_back;
     volatile bool m_is_listening;
     volatile bool m_answer_first;
@@ -52,6 +56,7 @@ public:
     boost::mutex m_mutex;
     std::string m_file_name;
     std::string m_history_name;
+    std::string m_display_format;
     Loader* m_loader;
     History* m_history;
     Speech* m_speech;

@@ -8,7 +8,8 @@ class ReviewString
 {
 public:
 
-    ReviewString( size_t hash = 0, Loader* loader = NULL, History* history = NULL, Speech* play = NULL, bool answer_first = false );
+    ReviewString( size_t hash = 0, Loader* loader = NULL, History* history = NULL, Speech* play = NULL, const std::string& display_format = "" );
+    std::string review_old();
     std::string review();
     void play_speech();
     const std::string& get_string();
@@ -21,4 +22,5 @@ public:
     History* m_history;
     Speech* m_speech;
     bool m_answer_first;
+    std::string m_display_format;
 };

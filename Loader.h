@@ -7,7 +7,7 @@ class Loader
 {
 public:
 
-    Loader();
+    Loader( boost::function<size_t (const std::string&)> hash_function = &Loader::string_hash );
     const std::set<size_t>& get_string_hash_set();
     const std::string& get_string( size_t hash );
     const std::string& get_string_no_lock( size_t hash ) { return m_hash_2_string_map[hash]; } // should lock ouside
@@ -20,6 +20,7 @@ public:
 public:
 
     static size_t string_hash( const std::string& str );
+    static size_t string_hash_new( const std::string& str ) { std::cout << "are you kidding?" << std::endl; ::exit(0); }
 
 public:
 
@@ -32,4 +33,5 @@ public:
     std::time_t m_last_write_time;
     std::set<size_t> m_string_hash_set;
     std::map<size_t, std::string> m_hash_2_string_map;
+    boost::function<size_t (const std::string&)> m_hash_function;
 };

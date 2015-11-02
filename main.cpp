@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
         ( review_auto_update_interval_option, boost::program_options::value<size_t>()->default_value( 60 ),  "in seconds" )
         ( review_order_option, boost::program_options::value<std::string>()->default_value( "Latest" ),  "review order in format of '<latest>-<earlist>-<random>" )
         ( review_answer_first, boost::program_options::value<std::string>()->default_value( "false" ),  "first display answer [A]" )
+        ( review_display_format, boost::program_options::value<std::string>()->default_value( "Q,AE" ),  "display format" )
         ( speech_play_back, boost::program_options::value<size_t>()->default_value( 0 ),  "listen back [n]" )
         ( speech_disabled_option, boost::program_options::value<std::string>()->default_value("false"), "true|false" )
         ( speech_path_option, boost::program_options::value< std::vector<std::string> >()->multitoken(), "speech path" )
@@ -30,6 +31,7 @@ int main(int argc, char* argv[])
         ( speech_no_text_to_speech, boost::program_options::value<std::string>()->default_value( "false" ), "no TTS(text-to-speech) (true|false)" )
         ( listen_no_string_option, boost::program_options::value<std::string>()->default_value( "false" ), "no original string (true|false)" )
         ( listen_all_option, boost::program_options::value<std::string>()->default_value( "false" ), "listen all? (true|false)" )
+        ( upgrade_hash_algorithm_option, boost::program_options::value<std::string>()->default_value( "false" ), "upgrade hash algorithm (true|false)" )
         ;
 
     desc.add( Log::get_description() );
@@ -65,6 +67,13 @@ int main(int argc, char* argv[])
     {
         ::CoInitializeEx( NULL, COINIT_MULTITHREADED );
         ReviewManager rm;
+
+        if ( vm[upgrade_hash_algorithm_option].as<std::string>() == "true" )
+        {
+            rm.upgrade_hash_algorithm();
+            return 0;
+        }
+
         rm.review();
     }
     catch ( boost::filesystem::filesystem_error& e )
