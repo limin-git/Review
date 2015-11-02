@@ -16,24 +16,43 @@ const boost::program_options::options_description* ProgramOptions::m_desc;
 
 void ProgramOptions::initialize( int argc, char* argv[], const boost::program_options::options_description& desc )
 {
-    m_desc = &desc;
-
-    store( boost::program_options::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), m_vm );
-    notify( m_vm );
-
-    if ( m_vm.count( config_option ) )
+    try
     {
-        m_config_file = m_vm[config_option].as<std::string>();
+        m_desc = &desc;
 
-        if ( boost::filesystem::exists( m_config_file ) )
+        store( boost::program_options::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), m_vm );
+        notify( m_vm );
+
+        if ( m_vm.count( config_option ) )
         {
-            store( boost::program_options::parse_config_file<char>( m_config_file.c_str(), desc, true ), m_vm );
-            notify( m_vm );
-            m_last_write_time = boost::filesystem::last_write_time( m_config_file );
+            m_config_file = m_vm[config_option].as<std::string>();
+
+            if ( boost::filesystem::exists( m_config_file ) )
+            {
+                store( boost::program_options::parse_config_file<char>( m_config_file.c_str(), desc, true ), m_vm );
+                notify( m_vm );
+                m_last_write_time = boost::filesystem::last_write_time( m_config_file );
+            }
+
+            DirectoryWatcher::connect_to_signal( boost::bind( &ProgramOptions::process_config_file_change ), m_config_file );
         }
 
-        DirectoryWatcher::connect_to_signal( boost::bind( &ProgramOptions::process_config_file_change ), m_config_file );
+        return;
     }
+    catch ( boost::filesystem::filesystem_error& e )
+    {
+        std::cout << e.what() << std::endl;
+    }
+    catch ( std::exception& e )
+    {
+        std::cout << e.what() << std::endl;
+    }
+    catch ( ... )
+    {
+        std::cout << "caught exception, exit." << std::endl;
+    }
+
+    ::exit( 0 );
 }
 
 

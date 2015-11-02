@@ -8,8 +8,6 @@
 
 int main(int argc, char* argv[])
 {
-    system( "COLOR F0" );
-
     boost::program_options::options_description desc( "Options", 100 );
     desc.add_options()
         ( "help,?", "produce help message" )
@@ -32,6 +30,7 @@ int main(int argc, char* argv[])
         ( listen_no_string_option, boost::program_options::value<std::string>()->default_value( "false" ), "no original string (true|false)" )
         ( listen_all_option, boost::program_options::value<std::string>()->default_value( "false" ), "listen all? (true|false)" )
         ( upgrade_hash_algorithm_option, boost::program_options::value<std::string>()->default_value( "false" ), "upgrade hash algorithm (true|false)" )
+        ( system_command_option, boost::program_options::value< std::vector<std::string> >()->multitoken(), "system commands" )
         ;
 
     desc.add( Log::get_description() );
@@ -61,7 +60,15 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    system( ("TITLE " + file).c_str() );
+    if ( vm.count( system_command_option ) )
+    {
+        std::vector<std::string> cmds = vm[system_command_option].as< std::vector<std::string> >();
+
+        for ( size_t i = 0; i < cmds.size(); ++i )
+        {
+            system( cmds[i].c_str() );
+        }
+    }
 
     try
     {

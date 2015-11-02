@@ -21,21 +21,7 @@ struct Order
         size_t rr = history->get_review_round(rhs);
         std::time_t lt = history->get_last_review_time( lhs );
         std::time_t rt = history->get_last_review_time( rhs );
-
-        if ( ( lt < rr ) || ( lr == rr && rt < lt ) )
-        {
-            return true;
-        }
-        else
-        {
-            const std::string& ls = loader->get_string_no_lock( lhs );
-            const std::string& rs = loader->get_string_no_lock( rhs );
-            return
-                ( lr < rr ) ||
-                ( lr == rr && rt < lt ) ||
-                ( lr == rr && lt == rt && ls.size() < rs.size() ) ||
-                ( lr == rr && lt == rt && ls.size() == rs.size() && ls < rs );
-        }
+        return ( ( lt < rr ) || ( lr == rr && rt < lt ) || ( lr == rr && lt == rt && lhs < rhs ) );
     }
 
     Loader* loader;
@@ -283,7 +269,6 @@ void ReviewManager::update()
 
         {
             static Order order(m_loader, m_history);
-            boost::unique_lock<boost::mutex> lock( m_loader->m_mutex );
             m_reviewing_list.sort( order );
         }
 
@@ -539,6 +524,13 @@ size_t ReviewManager::get_next_hash( std::list<size_t>& hash_list, EReviewOrder 
             hash_list.erase( it );
         }
     }
+    else if ( order == Middle )
+    {
+        std::list<size_t>::iterator it = hash_list.begin();
+        std::advance( it, hash_list.size() / 2 );
+        hash = *it;
+        hash_list.erase( it );
+    }
     else
     {
         LOG << "error: the review order is unknown: " << order;
@@ -557,13 +549,13 @@ ReviewManager::EReviewOrder ReviewManager::get_next_order( std::vector<EReviewOr
 
     if ( it == orders.end() )
     {
-        return Invalide;
+        return Invalid;
     }
 
     EReviewOrder order = *it;
     it++;
 
-    static const char* order_str[] = { "Latest", "Earliest", "Random" };
+    static const char* order_str[] = { "Latest", "Earliest", "Random", "Middle", "Invalid" };
     LOG_TRACE << "review order: " << order_str[order];
     return order;
 }
@@ -578,9 +570,14 @@ std::vector<ReviewManager::EReviewOrder> ReviewManager::convert_from_string( con
     for ( size_t i = 0; i < vos.size(); ++i )
     {
         boost::to_lower(vos[i]);
-        if ( vos[i] == "latest" ) { orders.push_back( Latest ); }
+        if ( vos[i] == "latest" )       { orders.push_back( Latest ); }
         else if ( vos[i] == "earlist" ) { orders.push_back( Earliest ); }
-        else if ( vos[i] == "random" ) { orders.push_back( Random ); }
+        else if ( vos[i] == "random" )  { orders.push_back( Random ); }
+        else if ( vos[i] == "middle" )  { orders.push_back( Middle ); }
+        else
+        {
+            LOG << "invalid order: " << vos[i];
+        }
     }
 
     return orders;

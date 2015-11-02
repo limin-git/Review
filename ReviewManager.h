@@ -10,7 +10,7 @@ class ReviewManager
 public:
 
     enum EReviewDirection{ Forward, Backward };
-    enum EReviewOrder{ Latest, Earliest, Random, Invalide };
+    enum EReviewOrder{ Latest, Earliest, Random, Middle, Invalid };
 
 public:
 

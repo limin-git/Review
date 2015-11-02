@@ -36,3 +36,6 @@
 
 #define upgrade_section                         "upgrade"
 #define upgrade_hash_algorithm_option           "upgrade.hash-algorithm"
+
+#define system_section                          "system"
+#define system_command_option                   "system.command"
