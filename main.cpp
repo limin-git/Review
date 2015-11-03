@@ -3,7 +3,7 @@
 #include "ReviewManager.h"
 #include "OptionString.h"
 #include "ProgramOptions.h"
-#include <objbase.h>
+#include "ConsoleCommand.h"
 
 
 int main(int argc, char* argv[])
@@ -60,15 +60,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if ( vm.count( system_command_option ) )
-    {
-        std::vector<std::string> cmds = vm[system_command_option].as< std::vector<std::string> >();
-
-        for ( size_t i = 0; i < cmds.size(); ++i )
-        {
-            system( cmds[i].c_str() );
-        }
-    }
+    ConsoleCommand console_command;
 
     try
     {

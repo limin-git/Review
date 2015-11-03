@@ -54,3 +54,6 @@
 #include <boost/timer/timer.hpp>
 #include <boost/chrono/io/duration_io.hpp>
 #include <boost/locale/encoding_utf.hpp>
+#include <boost/locale/encoding.hpp>
+#include <boost/any.hpp>
+#include <boost/variant.hpp>

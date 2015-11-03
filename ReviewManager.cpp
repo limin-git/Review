@@ -57,7 +57,6 @@ void ReviewManager::review()
     std::string c;
     boost::timer::cpu_timer t;
     ReviewString n;
-    ReviewString p;
     std::list<ReviewString> play_back;
 
     m_history->initialize();
@@ -67,7 +66,6 @@ void ReviewManager::review()
 
     while ( true )
     {
-        p = n;
         n = get_next();
         m_current_reviewing = &n;
 
@@ -87,9 +85,9 @@ void ReviewManager::review()
             {
                 system( "CLS" );
 
-                p = get_previous();
-                m_current_reviewing = &p;
-                c = p.review();
+                n = get_previous();
+                m_current_reviewing = &n;
+                c = n.review();
 
                 if ( c.empty() )
                 {
@@ -107,7 +105,7 @@ void ReviewManager::review()
 
             if ( c == "delete" || c == "d" )
             {
-                m_history->save_history( n.get_hash(), 0 );
+                m_history->disable( n.get_hash() );
             }
 
             if ( m_speech && m_play_back )
@@ -359,6 +357,10 @@ void ReviewManager::listen_thread()
     if ( m_listen_all )
     {
         listen_list.assign( m_all.begin(), m_all.end() );
+        listen_list.erase( std::remove_if( listen_list.begin(),
+                                           listen_list.end(),
+                                           boost::bind( &History::is_disabled, m_history, _1 ) ),
+                           listen_list.end() );
     }
     else
     {

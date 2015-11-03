@@ -184,6 +184,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\ConsoleCommand.h"
+				>
+			</File>
+			<File
 				RelativePath=".\DirectoryWatcher.h"
 				>
 			</File>
@@ -260,6 +264,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\ConsoleCommand.cpp"
+			>
+		</File>
 		<File
 			RelativePath=".\DirectoryWatcher.cpp"
 			>

@@ -10,6 +10,7 @@ public:
     History();
     void initialize();
     void save_history( size_t hash, std::time_t current_time );
+    void disable( size_t hash ) { save_history( hash, 0 ); }
     void synchronize_history( const std::set<size_t>& hashes );
     std::set<size_t> get_expired();
     size_t get_review_round( size_t hash ) { return m_history[hash].size(); }
@@ -21,6 +22,7 @@ public:
     void write_history();
     void merge_history( const history_type& history );
     bool is_expired( size_t hash, const std::time_t& current_time );
+    bool is_disabled( size_t hash );
     void clean_review_cache();
 
 public:

@@ -232,7 +232,7 @@ void History::merge_history( const history_type& history )
             {
                 history_times.clear();
                 history_times.push_back( 0 );
-                continue;
+                break;
             }
 
             if ( last_time + m_review_spans[round] < times[i] )
@@ -318,6 +318,19 @@ bool History::is_expired( size_t hash, const std::time_t& current_time )
 
     std::time_t span = m_review_spans[review_round];
     return ( last_review_time + span < current_time );
+}
+
+
+bool History::is_disabled( size_t hash )
+{
+    history_type::iterator it = m_history.find( hash );
+
+    if ( it == m_history.end() )
+    {
+        return false;
+    }
+
+    return ( ( 1 == it->second.size() ) && ( 0 == it->second.back() ) );
 }
 
 
