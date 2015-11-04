@@ -163,7 +163,7 @@ void Speech::update_option( const boost::program_options::variables_map& vm )
             if ( boost::filesystem::exists( path ) )
             {
                 paths.push_back( std::make_pair( path, extension ) );
-                LOG_DEBUG << "speech path: " << path << seperator << extension;
+                LOG_DEBUG << "speech path: " << path << " " << seperator << " " << extension;
             }
             else
             {

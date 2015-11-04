@@ -64,6 +64,7 @@ public:
     std::set<size_t> m_all;
     std::set<size_t> m_reviewing_set;
     std::list<size_t> m_reviewing_list;
+    std::list<size_t> m_listening_list;
     EReviewDirection m_review_mode;
     size_t m_backward_index;
     std::vector<size_t> m_review_history;

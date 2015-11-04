@@ -85,11 +85,11 @@ namespace Utility
         std::stringstream strm;
         std::time_t mon = 0, d = 0, h = 0, min = 0;
 
-        #define CALCULATE( n, u, x ) if ( u <= x  ) { n = x / u; x %= u; }
-        CALCULATE( mon, month, t );
-        CALCULATE( d, day, t );
-        CALCULATE( h, hour, t );
-        CALCULATE( min, minute, t );
+        #define CALCULATE( x, u, n ) if ( u <= x  ) { n = x / u; x %= u; }
+        CALCULATE( t, month, mon );
+        CALCULATE( t, day, d );
+        CALCULATE( t, hour, h );
+        CALCULATE( t, minute, min );
         #undef CALCULATE
 
         #define WRAP_ZERO(x) (9 < x ? "" : "0") << x 

@@ -236,7 +236,7 @@ void ReviewManager::update()
 
     const std::set<size_t>& all = m_loader->get_string_hash_set();
 
-    if ( m_all != all )
+    if ( m_all.size() != all.size() ) // no need precise
     {
         m_all = all;
         m_history->synchronize_history( m_all );
@@ -244,7 +244,7 @@ void ReviewManager::update()
 
     std::set<size_t> expired = m_history->get_expired();
 
-    if ( m_reviewing_set != expired )
+    if ( m_reviewing_set.size() != expired.size() )
     {
         if ( ! m_reviewing_set.empty() )
         {
@@ -266,7 +266,7 @@ void ReviewManager::update()
         m_reviewing_list.assign( m_reviewing_set.begin(), m_reviewing_set.end() );
 
         {
-            static Order order(m_loader, m_history);
+            static Order order( m_loader, m_history );
             m_reviewing_list.sort( order );
         }
 
@@ -288,6 +288,7 @@ void ReviewManager::update_thread()
         boost::unique_lock<boost::mutex> lock( m_mutex );
         m_condition.wait_for( lock, interval );
 
+        if ( ! m_is_listening )
         {
             LOG_TRACE << "begin";
             LOG_DEBUG << "update thread";
@@ -350,29 +351,32 @@ std::string ReviewManager::get_new_expired_string( const std::set<size_t>& os,  
 
 void ReviewManager::listen_thread()
 {
-    update();
-
-    std::list<size_t> listen_list;
-
-    if ( m_listen_all )
+    if ( m_listening_list.empty() )
     {
-        listen_list.assign( m_all.begin(), m_all.end() );
-        listen_list.erase( std::remove_if( listen_list.begin(),
-                                           listen_list.end(),
-                                           boost::bind( &History::is_disabled, m_history, _1 ) ),
-                           listen_list.end() );
-    }
-    else
-    {
-        listen_list = m_reviewing_list;
+        boost::unique_lock<boost::mutex> lock( m_mutex );
+
+        update();
+
+        if ( m_listen_all )
+        {
+            m_listening_list.assign( m_all.begin(), m_all.end() );
+            m_listening_list.erase( std::remove_if( m_listening_list.begin(),
+                                                    m_listening_list.end(),
+                                                    boost::bind( &History::is_disabled, m_history, _1 ) ),
+                                    m_listening_list.end() );
+        }
+        else
+        {
+            m_listening_list = m_reviewing_list;
+        }
     }
 
     std::vector<EReviewOrder> listen_orders = m_review_orders;
     std::vector<EReviewOrder>::iterator listen_orders_it = listen_orders.begin();
 
-    while ( m_is_listening && ! listen_list.empty() )
+    while ( m_is_listening && ! m_listening_list.empty() )
     {
-        size_t hash = get_next_hash( listen_list, get_next_order( listen_orders, listen_orders_it ) );
+        size_t hash = get_next_hash( m_listening_list, get_next_order( listen_orders, listen_orders_it ) );
         const std::string& s = m_loader->get_string( hash );
         std::vector<std::string> words = Utility::extract_words( s );
 
@@ -394,7 +398,7 @@ void ReviewManager::listen_thread()
         }
 
         system( "CLS" );
-        system( ( "TITLE listen - " + boost::lexical_cast<std::string>( listen_list.size() ) ).c_str() );
+        system( ( "TITLE listen - " + boost::lexical_cast<std::string>( m_listening_list.size() ) ).c_str() );
 
         if ( ! m_listen_no_string )
         {

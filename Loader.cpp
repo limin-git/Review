@@ -110,7 +110,7 @@ size_t Loader::string_hash( const std::string& str )
 {
     std::string s = str;
 
-    static boost::regex e( "(?x)\\[ [a-zA-Z0-9_-]+ \\]" );
+    static boost::regex e( "(?x)\\[ [a-zA-Z0-9_ -]+ \\]" );
     s = boost::regex_replace( s, e, "" );
 
     const char* chinese_chars[] =
