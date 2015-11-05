@@ -22,6 +22,7 @@
 #define review_order_option                     "review.order"
 #define review_answer_first                     "review.answer-first"
 #define review_display_format                   "review.display-format"
+#define review_once_per_day                     "review.once-per-day"
 
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"

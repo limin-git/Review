@@ -31,6 +31,10 @@ public:
 
 public:
 
+    void update_option( const boost::program_options::variables_map& vm ); // ProgramOptions slot
+
+public:
+
     std::string m_file_name;
     std::string m_review_name;
     history_type m_history;
@@ -38,4 +42,5 @@ public:
     size_t m_max_cache_size;
     size_t m_cache_size;
     time_list m_review_spans;
+    volatile bool m_once_per_day;
 };

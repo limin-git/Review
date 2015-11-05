@@ -4,37 +4,15 @@
 #include "Log.h"
 #include "OptionString.h"
 #include "ProgramOptions.h"
+#include "OptionUpdateHelper.h"
 
 
 History::History()
     : m_max_cache_size( 100 ),
-      m_cache_size( 0 )
+      m_cache_size( 0 ),
+      m_once_per_day( false )
 {
     const boost::program_options::variables_map& vm = ProgramOptions::get_vm();
-    std::string name = vm[file_name_option].as<std::string>();
-
-    if ( vm.count( file_history_option ) )
-    {
-        m_file_name = vm[file_history_option].as<std::string>();
-    }
-    else
-    {
-        m_file_name  = boost::filesystem::change_extension( name, ".history" ).string();
-    }
-
-    if ( vm.count( file_review_option ) )
-    {
-        m_review_name = vm[file_review_option].as<std::string>();
-    }
-    else
-    {
-        m_review_name  = boost::filesystem::change_extension( name, ".review" ).string();
-    }
-
-    if ( vm.count( review_max_cache_size_option ) )
-    {
-        m_max_cache_size = vm[review_max_cache_size_option].as<size_t>();
-    }
 
     {
         std::stringstream strm;
@@ -74,6 +52,8 @@ History::History()
         std::copy( string_list.begin(), string_list.end(), std::ostream_iterator<std::string>( strm, ", " ) );
         LOG_TRACE << "review-time-span(" << string_list.size() << "): " << strm.str();
     }
+
+    ProgramOptions::connect_to_signal( boost::bind( &History::update_option, this, _1 ) );
 }
 
 
@@ -304,7 +284,6 @@ bool History::is_expired( size_t hash, const std::time_t& current_time )
 
     if ( m_review_spans.size() == review_round )
     {
-        LOG_TEST << "finished (" << hash << ")";
         return false;
     }
 
@@ -312,12 +291,22 @@ bool History::is_expired( size_t hash, const std::time_t& current_time )
 
     if ( last_review_time == 0 )
     {
-        LOG_TEST << "deleted (" << hash << ")";
         return false;
     }
 
     std::time_t span = m_review_spans[review_round];
-    return ( last_review_time + span < current_time );
+
+    if ( ! ( last_review_time + span < current_time ) )
+    {
+        return false;
+    }
+
+    if ( m_once_per_day && Utility::is_today( last_review_time ) )
+    {
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -365,4 +354,37 @@ void History::clean_review_cache()
     }
 
     m_cache_size = 0;
+}
+
+
+void History::update_option( const boost::program_options::variables_map& vm )
+{
+    static OptionUpdateHelper option_helper;
+    static std::string name = vm[file_name_option].as<std::string>();
+    static std::string default_history_naame = boost::filesystem::change_extension( name, ".history" ).string();
+    static std::string default_review_naame = boost::filesystem::change_extension( name, ".review" ).string();
+
+    if ( option_helper.update_one_option<std::string>( file_history_option, vm, default_history_naame ) )
+    {
+        m_file_name = option_helper.get_value<std::string>( file_history_option );
+        LOG_DEBUG << "file-history-name: " << m_file_name;
+    }
+
+    if ( option_helper.update_one_option<std::string>( file_review_option, vm, default_review_naame ) )
+    {
+        m_review_name = option_helper.get_value<std::string>( file_review_option );
+        LOG_DEBUG << "file-review-name: " << m_review_name;
+    }
+
+    if ( option_helper.update_one_option<size_t>( review_max_cache_size_option, vm, 100 ) )
+    {
+        m_max_cache_size = option_helper.get_value<size_t>( review_max_cache_size_option );
+        LOG_DEBUG << "review-max-cache-size: " << m_max_cache_size;
+    }
+
+    if ( option_helper.update_one_option<std::string>( review_once_per_day, vm, "false" ) )
+    {
+        m_once_per_day = ( "true" == option_helper.get_value<std::string>( review_once_per_day ) );
+        LOG_DEBUG << "review-once-per-day: " << m_once_per_day;
+    }
 }

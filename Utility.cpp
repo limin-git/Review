@@ -78,6 +78,15 @@ namespace Utility
     }
 
 
+    bool is_today( std::time_t t )
+    {
+        static std::time_t today_t = std::time(0);
+        static std::tm today_tm = *std::localtime( &today_t );
+        std::tm* m = std::localtime( &t );
+        return ( m->tm_mday == today_tm.tm_mday && m->tm_mon == today_tm.tm_mon && m->tm_year == today_tm.tm_year );
+    }
+
+
     std::string time_duration_string( std::time_t t )
     {
         enum { minute = 60, hour = 60 * minute ,day = 24 * hour, month = 30 * day };
