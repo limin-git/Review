@@ -20,6 +20,5 @@ public:
     Loader* m_loader;
     History* m_history;
     Speech* m_speech;
-    bool m_answer_first;
     std::string m_display_format;
 };

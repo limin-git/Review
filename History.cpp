@@ -10,7 +10,7 @@
 History::History()
     : m_max_cache_size( 100 ),
       m_cache_size( 0 ),
-      m_once_per_day( false )
+      m_once_per_days( 0 )
 {
     const boost::program_options::variables_map& vm = ProgramOptions::get_vm();
 
@@ -301,9 +301,12 @@ bool History::is_expired( size_t hash, const std::time_t& current_time )
         return false;
     }
 
-    if ( m_once_per_day && Utility::is_today( last_review_time ) )
+    if ( m_once_per_days )
     {
-        return false;
+        if ( current_time - last_review_time < m_once_per_days )
+        {
+            return false;
+        }
     }
 
     return true;
@@ -382,9 +385,10 @@ void History::update_option( const boost::program_options::variables_map& vm )
         LOG_DEBUG << "review-max-cache-size: " << m_max_cache_size;
     }
 
-    if ( option_helper.update_one_option<std::string>( review_once_per_day, vm, "false" ) )
+    if ( option_helper.update_one_option<size_t>( review_once_per_days_option, vm, 0 ) )
     {
-        m_once_per_day = ( "true" == option_helper.get_value<std::string>( review_once_per_day ) );
-        LOG_DEBUG << "review-once-per-day: " << m_once_per_day;
+        m_once_per_days = option_helper.get_value<size_t>( review_once_per_days_option );
+        LOG_DEBUG << "review-once-per-days: " << m_once_per_days;
+        m_once_per_days *= 3600 * 24;
     }
 }

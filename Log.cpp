@@ -165,8 +165,8 @@ void Log::update_option( const boost::program_options::variables_map& vm )
     bool with_test  = std::find( m_debug_levels.begin(), m_debug_levels.end(), "test" )     != m_debug_levels.end();
     bool with_all   = std::find( m_debug_levels.begin(), m_debug_levels.end(), "*" )        != m_debug_levels.end();
 
-    filter fltr = 
-        ( ! expressions::has_attr(debug_level_attribute) ) || 
+    filter fltr =
+        ( ! expressions::has_attr(debug_level_attribute) ) ||
         ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "ERROR" && ( with_error || with_all ) ) ||
         ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "INFO"  && ( with_info  || with_all ) ) ||
         ( expressions::has_attr(debug_level_attribute) && debug_level_attribute == "DEBUG" && ( with_debug || with_all ) ) ||

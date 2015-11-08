@@ -92,7 +92,6 @@ std::string ReviewString::review()
     if ( m_speech )
     {
         play_speech();
-        m_speech = NULL; // only once
     }
 
     LOG_DEBUG

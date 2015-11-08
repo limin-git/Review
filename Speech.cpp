@@ -159,7 +159,7 @@ void Speech::update_option( const boost::program_options::variables_map& vm )
                 extension = boost::trim_copy( vs[i].substr( pos + 1, std::string::npos ) );
                 seperator = vs[i][pos];
             }
-            
+
             if ( boost::filesystem::exists( path ) )
             {
                 paths.push_back( std::make_pair( path, extension ) );

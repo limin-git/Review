@@ -2,6 +2,8 @@
 #include "Utility.h"
 #include "Log.h"
 #include "QueueProcessor.h"
+#include <dshow.h>
+#pragma comment(lib, "strmiids.lib") // For IID_IGraphBuilder, IID_IMediaControl, IID_IMediaEvent
 
 
 namespace Utility
@@ -101,7 +103,7 @@ namespace Utility
         CALCULATE( t, minute, min );
         #undef CALCULATE
 
-        #define WRAP_ZERO(x) (9 < x ? "" : "0") << x 
+        #define WRAP_ZERO(x) (9 < x ? "" : "0") << x
         if ( mon || d ) { strm << WRAP_ZERO(mon) << "/" << WRAP_ZERO(d) << "-"; }
         strm << WRAP_ZERO(h) << ":" << WRAP_ZERO(min);
         #undef WRAP_ZERO
@@ -131,58 +133,56 @@ namespace Utility
     }
 
 
-    //#include <dshow.h>
-    //#pragma comment(lib, "strmiids.lib") // For IID_IGraphBuilder, IID_IMediaControl, IID_IMediaEvent
-    //void play_sound_2( const std::string& file  ) // if ::mciSendString go mad, try this one
-    //{
-    //    try
-    //    {
-    //        IGraphBuilder* graph = NULL;
-    //        IMediaControl* control = NULL;
-    //        IMediaEvent*   evnt = NULL;
-
-    //        ::CoCreateInstance( CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graph );
-    //        graph->QueryInterface( IID_IMediaControl, (void **)&control );
-    //        graph->QueryInterface( IID_IMediaEvent, (void **)&evnt );
-
-    //        HRESULT hr = graph->RenderFile( boost::locale::conv::utf_to_utf<wchar_t>(file).c_str(), NULL );
-
-    //        if ( SUCCEEDED(hr) )
-    //        {
-    //            hr = control->Run();
-
-    //            if ( SUCCEEDED(hr) )
-    //            {
-    //                long code;
-    //                evnt->WaitForCompletion( INFINITE, &code );
-    //            }
-    //        }
-
-    //        evnt->Release();
-    //        control->Release();
-    //        graph->Release();
-    //    }
-    //    catch ( ... )
-    //    {
-    //        LOG << "error " << file;
-    //    }
-    //}
-
-
-    void play_sound( const std::string& file )
+    void play_sound( const std::string& file  )
     {
-        char buffer[MAX_PATH] = { 0 };
-        ::GetShortPathName( file.c_str(), buffer, MAX_PATH );
-        std::string s = "play "+ std::string(buffer) + " wait";
-        LOG_TRACE << "mciSendString " << s;
-
-        MCIERROR code = ::mciSendString( s.c_str(), NULL, 0, NULL );
-
-        if ( 0 != code )
+        try
         {
-            LOG << "error: mciSendString file =" << file << ", error = " << code;
+            IGraphBuilder* graph = NULL;
+            IMediaControl* control = NULL;
+            IMediaEvent*   evnt = NULL;
+
+            ::CoCreateInstance( CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graph );
+            graph->QueryInterface( IID_IMediaControl, (void **)&control );
+            graph->QueryInterface( IID_IMediaEvent, (void **)&evnt );
+
+            HRESULT hr = graph->RenderFile( boost::locale::conv::utf_to_utf<wchar_t>(file).c_str(), NULL );
+
+            if ( SUCCEEDED(hr) )
+            {
+                hr = control->Run();
+
+                if ( SUCCEEDED(hr) )
+                {
+                    long code;
+                    evnt->WaitForCompletion( INFINITE, &code );
+                }
+            }
+
+            evnt->Release();
+            control->Release();
+            graph->Release();
+        }
+        catch ( ... )
+        {
+            LOG << "error " << file;
         }
     }
+
+
+    //void play_sound_fucked( const std::string& file )
+    //{
+    //    char buffer[MAX_PATH] = { 0 };
+    //    ::GetShortPathName( file.c_str(), buffer, MAX_PATH );
+    //    std::string s = "play "+ std::string(buffer) + " wait";
+    //    LOG_TRACE << "mciSendString " << s;
+
+    //    MCIERROR code = ::mciSendString( s.c_str(), NULL, 0, NULL );
+
+    //    if ( 0 != code )
+    //    {
+    //        LOG << "error: mciSendString file =" << file << ", error = " << code;
+    //    }
+    //}
 
 
     void play_sound_list( const std::vector<std::string>& files )

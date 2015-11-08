@@ -42,5 +42,5 @@ public:
     size_t m_max_cache_size;
     size_t m_cache_size;
     time_list m_review_spans;
-    volatile bool m_once_per_day;
+    volatile size_t m_once_per_days;
 };

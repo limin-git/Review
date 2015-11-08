@@ -50,8 +50,8 @@ public:
 public:
 
     size_t m_play_back;
+    std::list<ReviewString> m_play_back_string;
     volatile bool m_is_listening;
-    volatile bool m_answer_first;
     boost::condition_variable m_condition;
     boost::mutex m_mutex;
     std::string m_file_name;
@@ -69,10 +69,13 @@ public:
     size_t m_backward_index;
     std::vector<size_t> m_review_history;
     boost::timer::nanosecond_type m_minimal_review_time;
-    size_t m_auto_update_interval;
+    volatile size_t m_auto_update_interval;
     volatile ReviewString* m_current_reviewing;
     std::vector<EReviewOrder> m_review_orders;
     std::vector<EReviewOrder>::iterator m_review_order_it;
     volatile bool m_listen_no_string;
     volatile bool m_listen_all;
+    volatile size_t m_group_size;
+    volatile size_t m_group_repeat;
+    volatile bool m_group_manually_add;
 };

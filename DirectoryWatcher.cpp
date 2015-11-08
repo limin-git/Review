@@ -39,8 +39,8 @@ void DirectoryWatcher::watch_directory_thread( const std::string& file )
 
     std::time_t last_write_time = boost::filesystem::last_write_time( file );
 
-    while ( true ) 
-    { 
+    while ( true )
+    {
         DWORD status = ::WaitForSingleObject( handle, INFINITE );
 
         if ( WAIT_OBJECT_0 == status )

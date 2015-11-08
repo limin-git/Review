@@ -139,7 +139,7 @@ std::string Loader::get_difference( const HashSet& os, const HashStringMap& om, 
 {
     std::set<size_t> removed;
     std::set_difference( os.begin(), os.end(), ns.begin(), ns.end(), std::inserter(removed, removed.begin()) );
-    
+
     std::set<size_t> added;
     std::set_difference( ns.begin(), ns.end(), os.begin(), os.end(), std::inserter(added, added.begin()) );
 
