@@ -22,9 +22,7 @@
 #define review_order_option                     "review.order"
 #define review_display_format_option            "review.display-format"
 #define review_once_per_days_option             "review.once-per-days"
-#define review_group_size_option                "review.group-size"
-#define review_group_repeat_option              "review.group-repeat"
-#define review_group_manually_add_option        "review.group-manually-add"
+#define review_minimal_review_distance_option   "review.minimal-review-distance"
 
 #define speech_section                          "speech"
 #define speech_path_option                      "speech.path"

@@ -51,6 +51,8 @@ public:
 
     size_t m_play_back;
     std::list<ReviewString> m_play_back_string;
+    std::list<ReviewString> m_review_group;
+    size_t m_minimal_review_distance;
     volatile bool m_is_listening;
     boost::condition_variable m_condition;
     boost::mutex m_mutex;
@@ -75,7 +77,6 @@ public:
     std::vector<EReviewOrder>::iterator m_review_order_it;
     volatile bool m_listen_no_string;
     volatile bool m_listen_all;
-    volatile size_t m_group_size;
-    volatile size_t m_group_repeat;
-    volatile bool m_group_manually_add;
+    size_t m_review_number;
+    std::map<size_t, size_t> m_hash_number_map;
 };

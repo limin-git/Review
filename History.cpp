@@ -221,6 +221,10 @@ void History::merge_history( const history_type& history )
                 last_time = times[i];
                 round++;
             }
+            else if ( last_time < times[i] )
+            {
+                history_times.back() = times[i];
+            }
             else
             {
                 LOG_DEBUG

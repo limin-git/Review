@@ -25,6 +25,11 @@ std::string ReviewString::review()
         return "";
     }
 
+    if ( m_speech )
+    {
+        play_speech();
+    }
+
     std::string s = m_loader->get_string( m_hash );
     s.erase( std::remove_if( s.begin(), s.end(), boost::is_any_of( "{}" ) ), s.end() );
 
@@ -87,11 +92,6 @@ std::string ReviewString::review()
                 should_new_line = true;
             }
         }
-    }
-
-    if ( m_speech )
-    {
-        play_speech();
     }
 
     LOG_DEBUG

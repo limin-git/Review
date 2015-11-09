@@ -43,9 +43,8 @@ ReviewManager::ReviewManager()
       m_current_reviewing( NULL ),
       m_listen_no_string( false ),
       m_listen_all( false ),
-      m_group_size( 0 ),
-      m_group_repeat( 0 ),
-      m_group_manually_add( false )
+      m_review_number( 0 ),
+      m_minimal_review_distance( 10 )
 {
     m_loader = new Loader;
     m_history = new History;
@@ -59,7 +58,6 @@ void ReviewManager::review()
     std::string c;
     boost::timer::cpu_timer t;
     ReviewString n;
-    std::list<ReviewString> string_group;
 
     m_history->initialize();
     m_history->synchronize_history( m_loader->get_string_hash_set() );
@@ -109,45 +107,10 @@ void ReviewManager::review()
             {
                 m_history->disable( n.get_hash() );
             }
-            else
-            {
-                if ( m_group_repeat && m_group_size && ! m_group_manually_add )
-                {
-                    string_group.push_back( n );
-                }
-            }
 
             if ( c == "add-to-group" || c == "g" )
             {
-                string_group.push_back( n );
-            }
-
-            if ( m_group_repeat && m_group_size <= string_group.size() )
-            {
-                for ( size_t i = 0; i < m_group_repeat; ++i )
-                {
-                    std::list<ReviewString> current_group = string_group;
-
-                    while ( ! current_group.empty() )
-                    {
-                        std::stringstream strm;
-                        strm << "TITLE group repeat " << m_group_repeat << "/" << i << ", " << m_group_size << "/" << current_group.size();
-                        system( strm.str().c_str() );
-
-                        ReviewString n = current_group.front();
-                        current_group.pop_front();
-                        m_current_reviewing = &n;
-
-                        c = n.review();
-
-                        if ( c.empty() )
-                        {
-                            c = wait_for_input();
-                        }
-                    }
-                }
-
-                string_group.clear();
+                m_review_group.push_back( n );
             }
 
             if ( m_speech && m_play_back )
@@ -198,6 +161,20 @@ ReviewString ReviewManager::get_next()
         }
     }
 
+    for ( std::list<ReviewString>::iterator it = m_review_group.begin(); it != m_review_group.end(); ++it )
+    {
+        size_t hash = it->get_hash();
+
+        if ( m_minimal_review_distance < m_review_number - m_hash_number_map[hash] )
+        {
+            ReviewString s = *it;
+            m_review_group.erase( it );
+            s.m_speech = m_speech;
+            m_hash_number_map[hash] = m_review_number++;
+            return s;
+        }
+    }
+
     size_t hash = get_next_hash( m_reviewing_list, get_next_order( m_review_orders, m_review_order_it ) );
     m_reviewing_set.erase( hash );
     set_title();
@@ -214,6 +191,8 @@ ReviewString ReviewManager::get_next()
     {
         m_condition.notify_one();
     }
+
+    m_hash_number_map[hash] = m_review_number++;
 
     LOG_TRACE << "end";
     return ReviewString( hash, m_loader, m_history, m_speech, m_display_format );
@@ -318,7 +297,7 @@ void ReviewManager::update()
 
         set_title();
         LOG_DEBUG << "sort " << m_reviewing_list.size();
-        LOG_TEST<< std::endl << get_hash_list_string( m_reviewing_list );
+        // LOG_TEST<< std::endl << get_hash_list_string( m_reviewing_list );
     }
 
     LOG_TRACE << "end";
@@ -555,22 +534,10 @@ void ReviewManager::update_option( const boost::program_options::variables_map& 
         LOG_DEBUG << "review-display-format: " << m_display_format;
     }
 
-    if ( option_helper.update_one_option<size_t>( review_group_size_option, vm, 0 ) )
+    if ( option_helper.update_one_option<size_t>( review_minimal_review_distance_option, vm, 10 ) )
     {
-        m_group_size = option_helper.get_value<size_t>( review_group_size_option );
-        LOG_DEBUG << "review-group-size: " << m_group_size;
-    }
-
-    if ( option_helper.update_one_option<size_t>( review_group_repeat_option, vm, 0 ) )
-    {
-        m_group_repeat = option_helper.get_value<size_t>( review_group_repeat_option );
-        LOG_DEBUG << "review-group-repeat: " << m_group_repeat;
-    }
-
-    if ( option_helper.update_one_option<std::string>( review_group_manually_add_option, vm, "false" ) )
-    {
-        m_group_manually_add = ( "true" == option_helper.get_value<std::string>( review_group_manually_add_option ) );
-        LOG_DEBUG << "review-group-manually-add: " << m_group_manually_add;
+        m_minimal_review_distance = option_helper.get_value<size_t>( review_minimal_review_distance_option );
+        LOG_DEBUG << "review-minimal-review-distance: " << m_minimal_review_distance;
     }
 }
 
